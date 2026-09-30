@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <title>Thú Chiến</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/theme.css">
+</head>
+<body>
+  <!-- Đăng nhập -->
+  <section id="screen-login" class="screen active">
+    <div class="login-card">
+      <div class="logo-row"><canvas id="logo-xe" width="300" height="240"></canvas><div class="logo">THÚ CHIẾN</div></div>
+      <div class="tagline">Đại chiến pháo thú · 5 đấu 5</div>
+      <div class="gender-pick" id="login-gender">
+        <button type="button" data-g="m"><canvas width="64" height="64"></canvas>Nam</button>
+        <button type="button" data-g="f"><canvas width="64" height="64"></canvas>Nữ</button>
+        <button type="button" data-g="m2"><canvas width="64" height="64"></canvas>Nam</button>
+        <button type="button" data-g="f2"><canvas width="64" height="64"></canvas>Nữ</button>
+      </div>
+      <form id="login-form">
+        <input id="login-name" maxlength="16" placeholder="Nhập tên của bạn" autocomplete="off" autofocus>
+        <input id="login-pin" maxlength="4" inputmode="numeric" placeholder="PIN 4 số" autocomplete="off" title="Lần đầu: tự đặt mã PIN để giữ tên. Lần sau: nhập đúng mã đó.">
+        <button class="btn gold big" type="submit">VÀO GAME</button>
+      </form>
+      <div class="login-hint">Lần đầu vào: tự đặt mã PIN 4 số để giữ tên và thứ hạng của bạn.</div>
+      <div id="login-error" class="error"></div>
+    </div>
+  </section>
+
+  <!-- Sảnh -->
+  <section id="screen-lobby" class="screen">
+    <header class="topbar">
+      <div class="logo small">THÚ CHIẾN</div>
+      <div class="spacer"></div>
+      <div class="pill" id="lobby-online"></div>
+      <div class="pill me" id="lobby-me"></div>
+    </header>
+    <div class="lobby-body">
+      <div class="panel me-panel">
+        <canvas id="me-card-pilot" width="360" height="300"></canvas>
+        <div class="mp-name" id="mp-name"></div>
+        <div class="mp-rank" id="mp-rank"></div>
+        <div class="mp-stats"><div><b id="mp-games">0</b><span>Trận</span></div><div><b id="mp-rate">0%</b><span>Thắng</span></div><div><b id="mp-gold">0</b><span>Vàng</span></div></div>
+        <button class="btn howto-btn" type="button" id="howto-open">📖 CÁCH CHƠI</button>
+      </div>
+      <div class="panel rooms-panel">
+        <div class="panel-title">Danh sách phòng</div>
+        <div id="room-list" class="room-list"></div>
+      </div>
+      <div class="panel create-panel">
+        <div class="panel-title">Tạo phòng mới</div>
+        <form id="create-form">
+          <label>Tên phòng</label>
+          <input id="create-name" maxlength="16" placeholder="VD: Team Dev vs QA">
+          <button class="btn gold" type="submit">TẠO PHÒNG</button>
+          <button class="btn practice-btn" type="button" id="practice-btn">🎯 LUYỆN TẬP MỘT MÌNH</button>
+        </form>
+        <div class="leader">
+          <div class="panel-title">🏆 Bảng xếp hạng</div>
+          <div id="leaderboard"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Phòng chờ -->
+  <section id="screen-room" class="screen">
+    <header class="topbar">
+      <button class="btn ghost" id="room-leave">← Rời phòng</button>
+      <div class="room-title" id="room-title"></div>
+      <div class="spacer"></div>
+    </header>
+    <!-- room rules box (Gunbound: mode, map, sudden death type/turn...) -->
+    <div class="room-rules">
+      <label class="rule"><span>Chế độ</span><select id="room-mode"><option value="solo">Đấu thường</option><option value="score">Tính mạng (Score)</option></select></label>
+      <label class="rule"><span>Bản đồ</span><select id="room-map"></select></label>
+      <label class="rule"><span>Xe</span><select id="room-xemode"><option value="pick">Tự chọn</option><option value="random">Ngẫu nhiên cả phòng</option></select></label>
+      <label class="rule"><span>Thời gian lượt</span><select id="room-turn"><option value="15">15 giây</option><option value="20">20 giây</option><option value="30">30 giây</option></select></label>
+      <label class="rule"><span>Đột tử</span><select id="room-sudden"><option value="0">Tắt</option><option value="20">Sau lượt 20</option><option value="30">Sau lượt 30</option><option value="40">Sau lượt 40</option></select></label>
+      <label class="rule"><span>Kiểu đột tử</span><select id="room-sudden-type"><option value="double">Bắn Đôi</option><option value="bigbomb">Bom To</option><option value="ss">SS Mỗi Lượt</option><option value="drain">Máu Cạn Dần</option></select></label>
+    </div>
+    <div class="room-body">
+      <div class="teams">
+        <div class="team team-A">
+          <div class="team-head"><span>ĐỘI ĐỎ</span><span class="head-btns"><button class="btn small add-bot" data-bot="A">+ NPC</button><button class="btn small" data-team="A">Vào đội</button></span></div>
+          <div class="slots" id="slots-A"></div>
+        </div>
+        <div class="vs">VS</div>
+        <div class="team team-B">
+          <div class="team-head"><span>ĐỘI XANH</span><span class="head-btns"><button class="btn small add-bot" data-bot="B">+ NPC</button><button class="btn small" data-team="B">Vào đội</button></span></div>
+          <div class="slots" id="slots-B"></div>
+        </div>
+      </div>
+      <div class="xe-pick">
+        <div class="pick-head"><div class="panel-title">Chọn xe</div>
+          <div class="gender-pick small" id="room-gender"><span>Phi công:</span>
+            <button type="button" data-g="m">👦 Nam 1</button><button type="button" data-g="f">👧 Nữ 1</button><button type="button" data-g="m2">👦 Nam 2</button><button type="button" data-g="f2">👧 Nữ 2</button></div></div>
+        <div class="xe-grid" id="xe-grid"></div>
+        <div class="xe-detail" id="xe-detail"></div>
+      </div>
+      <div class="room-side">
+        <div class="chat panel" id="room-chat">
+          <div class="panel-title">Trò chuyện</div>
+          <div class="chat-log"></div>
+          <form class="chat-form"><input maxlength="200" placeholder="Nhập tin nhắn..."></form>
+        </div>
+        <button class="btn gold big" id="room-ready">SẴN SÀNG</button>
+        <div id="room-error" class="error"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Trận đấu -->
+  <section id="screen-game" class="screen">
+    <canvas id="game-canvas"></canvas>
+    <div class="hud">
+      <div class="hud-top">
+        <div class="turn-order" id="turn-order"></div>
+        <div class="hud-center">
+          <div class="wind-box">
+            <div class="timer" id="timer">20</div>
+            <canvas id="wind-dial" width="92" height="92"></canvas>
+            <div class="weather-bar" id="weather-bar" title="Thời tiết: ô khung vàng đang hoạt động, bên phải là các lượt sắp tới"></div>
+            <div class="turn-name" id="turn-name"></div>
+          </div>
+        </div>
+        <canvas class="minimap" id="minimap" width="240" height="110"></canvas>
+      </div>
+
+      <div class="big-timer" id="big-timer"></div>
+      <button class="mute" id="mute" title="Bật/tắt âm thanh">🔊</button>
+      <div class="utility"><button class="btn" id="btn-pass" title="Bỏ lượt (F8)">⏭ Bỏ lượt · F8</button><button class="btn quit" id="btn-quit" title="Thoát trận (ESC)">✕ Thoát · ESC</button></div>
+      <div class="practice-tip" id="practice-tip"></div>
+      <div class="tip" id="tip"></div>
+      <div class="banner" id="banner"></div>
+      <div class="ss-cutin" id="ss-cutin">
+        <div class="ci-band"><div class="ci-lines"></div></div>
+        <canvas width="420" height="300"></canvas>
+        <div class="ci-text"><div class="ci-player"></div><div class="ci-name"></div></div>
+      </div>
+      <div class="ink" id="ink"></div>
+
+      <div class="game-chat" id="game-chat">
+        <div class="chat-log"></div>
+        <form class="chat-form"><input maxlength="200" placeholder="Enter để chat..."></form>
+      </div>
+
+      <div class="hud-tip" id="hud-tip"></div>
+      <div class="hud-bottom" id="hud-bottom">
+        <div class="me-card">
+          <canvas id="me-portrait" width="96" height="80"></canvas>
+          <div class="me-info">
+            <div class="me-name" id="me-name"></div>
+            <div class="bar hp"><div id="me-hp"></div><span id="me-hp-txt"></span></div>
+            <div class="bar rage" title="SS sẵn sàng khi thanh đầy; sau khi bắn SS sẽ khoá 4 lượt của bạn"><div id="me-rage"></div><span>SS</span></div>
+            <div class="me-gold"><b id="me-gold">0</b> G <span class="me-passive" id="me-passive"></span></div>
+          </div>
+        </div>
+        <div class="controls">
+          <div class="shots" id="shots">
+            <button data-shot="s1"><b>1</b><span></span></button>
+            <button data-shot="s2"><b>2</b><span></span></button>
+            <button data-shot="ss" class="ss"><b>SS</b><span></span></button>
+
+            <div class="items" id="items"></div>
+            <div class="shot-name" id="shot-name"></div>
+          </div>
+          <div class="power">
+            <div class="power-label">LỰC</div>
+            <div class="power-bar"><div class="power-fill" id="power-fill"></div><div class="power-last" id="power-last"></div><div class="power-ticks"></div><div class="power-scale"><span>0</span><span>25</span><span>50</span><span>75</span><span>100</span></div></div>
+            <div class="power-val" id="power-val">0</div>
+          </div>
+          <div class="move">
+            <div class="power-label">LỰC ĐI</div>
+            <div class="move-bar"><div id="move-fill"></div></div>
+          </div>
+        </div>
+        <div class="angle-card">
+          <canvas id="angle-dial" width="110" height="64"></canvas>
+          <div class="angle-val"><span id="angle-val">45</span>°</div>
+          <div class="last-angle">LẦN TRƯỚC <b id="last-angle">--</b>°</div>
+        </div>
+        <div class="lives">
+          <div class="life A"><b>A</b><span>ĐỎ</span><i id="life-A">5</i></div>
+          <div class="life B"><b>B</b><span>XANH</span><i id="life-B">5</i></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="loading" id="loading">
+      <div class="ld-top">
+        <div class="ld-side" id="ld-A"></div>
+        <div class="ld-center">
+          <div class="ld-title">★ ★ ĐANG TẢI ★ ★</div>
+          <div class="ld-panel">
+            <div class="ld-room" id="ld-room"></div>
+            <canvas id="ld-thumb" width="400" height="120"></canvas>
+            <div class="ld-mapname" id="ld-mapname"></div>
+            <div class="ld-rules">
+              <div class="ld-mode" id="ld-mode"></div>
+              <div>Đội Đỏ <b>VS</b> Đội Xanh</div>
+              <div>Hạ toàn bộ đội địch</div>
+              <div class="ld-sub" id="ld-rules-extra"></div>
+            </div>
+          </div>
+        </div>
+        <div class="ld-side" id="ld-B"></div>
+      </div>
+      <div class="ld-bottom"><canvas id="ld-map" width="1600" height="300"></canvas></div>
+    </div>
+
+    <div class="modal" id="quit-modal">
+      <div class="result-card quit-card">
+        <div class="result-title lose" style="font-size:40px">Thoát trận?</div>
+        <div class="result-sub">Xe của bạn sẽ bị bỏ lại và đội bạn thiếu người. Nếu cả đội rời đi, đội đó bị tính thua.</div>
+        <div class="quit-btns"><button class="btn big" id="quit-no">Ở lại</button><button class="btn gold big" id="quit-yes">Thoát về sảnh</button></div>
+      </div>
+    </div>
+
+    <div class="modal" id="result">
+      <div class="result-card">
+        <div class="result-title" id="result-title"></div>
+        <div class="result-sub" id="result-sub"></div>
+        <div class="mvp-card" id="mvp-card"><canvas width="220" height="180"></canvas><div><div class="mv-tag">⭐ MVP TRẬN ĐẤU</div><div class="mv-name"></div><div class="mv-stats"></div></div></div>
+        <div id="rank-up" class="rank-up"></div>
+        <table class="result-table"><thead><tr><th>Người chơi</th><th>Xe</th><th>Sát thương</th><th>Hạ gục</th><th>Bị hạ</th><th>Vàng</th><th>GP</th><th>Trạng thái</th></tr></thead><tbody id="result-body"></tbody></table>
+        <button class="btn gold big" id="result-back">VỀ PHÒNG CHỜ</button>
+      </div>
+    </div>
+  </section>
+
+  <div class="modal" id="rider-modal">
+    <div class="result-card rider-card">
+      <button class="rider-x" id="rider-close" title="Đóng (Esc)">✕</button>
+      <canvas id="rider-cv" width="560" height="420"></canvas>
+      <div class="rider-info" id="rider-info"></div>
+    </div>
+  </div>
+  <div class="modal" id="ranks-modal">
+    <div class="result-card howto-card ranks-card">
+      <div class="panel-title" style="font-size:28px">🏅 Bảng hạng</div>
+      <div class="rk-note">Điểm GP: mỗi trận +2, thắng +10, mỗi lần hạ gục +3. GP không bao giờ bị trừ.</div>
+      <div class="rk-list" id="ranks-list"></div>
+      <button class="btn gold big" id="ranks-close">ĐÓNG</button>
+    </div>
+  </div>
+  <div class="modal" id="howto-modal">
+    <div class="result-card howto-card">
+      <div class="panel-title" style="font-size:28px">📖 Cách chơi</div>
+      <ul>
+            <li><b>← →</b> di chuyển xe</li>
+            <li><b>↑ ↓</b> chỉnh góc bắn</li>
+            <li>Giữ <b>SPACE</b> để lấy lực, thả ra để bắn</li>
+            <li><b>1 / 2 / 3</b> chọn Shot 1, Shot 2, SS</li>
+            <li><b>SS</b> dùng được ngay từ đầu; bắn SS xong sẽ khoá 4 lượt của bạn (🔒)</li>
+            <li><b>4 5 6 7</b> vật phẩm: Bắn Đôi, Dịch Chuyển, Hồi Máu, Đạn Mạnh (mua bằng vàng)</li>
+            <li><b>ESC</b> thoát trận</li>
+            <li>Lăn chuột để thu phóng, kéo chuột để nhìn bản đồ</li>
+            <li><b>Enter</b> để chat</li>
+          </ul>
+      <button class="btn gold big" id="howto-close">ĐÃ HIỂU</button>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script type="module" src="/js/app.js"></script>
+</body>
+</html>
