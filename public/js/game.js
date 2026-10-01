@@ -29,16 +29,6 @@ const MIRROR = new Set(['canhcut-s2']);
 // creatures and fins kept right side up when flying left
 const UPRIGHT = new Set(['rong-s1', 'rong-ss', 'phuong-s2', 'phuong-ss', 'kimquy-s2', 'bocap-s1', 'bocap-ss', 'cu-ss', 'camap-s2', 'camap-ss', 'canhcut-s1', 'canhcut-s2']);
 
-function makeCracks(x, y, r) {
-  const lines = [];
-  for (let i = 0; i < 7; i++) {
-    let a = (i / 7) * Math.PI * 2 + Math.random() * 0.5, px = x, py = y;
-    const line = [[px, py]];
-    for (let k = 0; k < 6; k++) { a += (Math.random() - 0.5) * 0.8; px += Math.cos(a) * r * 0.35; py += Math.sin(a) * r * 0.25; line.push([px, py]); }
-    lines.push(line);
-  }
-  return lines;
-}
 const $ = id => document.getElementById(id);
 
 export class Game {
@@ -65,7 +55,7 @@ export class Game {
     this.ribbons = [];
     this.dark = 0;
     this.rising = [];
-    this.cracks = [];
+    this.erupts = []; // painted ground effects that pop up and sink back (Tượng Tinh's lava quake)
     this.flash = null;
     this.pAcc = 0;
     this.frame = 0;
@@ -720,9 +710,12 @@ export class Game {
         carveTerrain(this.tctx, e.x, e.y, e.r, this.map);
         break;
       case 'boom': {
-        this.fx.boom(e.look, e.x, e.y, e.r, e.big);
+        // Tượng Tinh's quake pulses get painted lava effects instead of a generic explosion
+        const lavaSS = this.anim?.xe === 'voi' && this.anim.shot === 'ss';
+        if (lavaSS && !e.big && ASSETS.fx.lava) { this.quakePulse(e); break; }
+        this.fx.boom(lavaSS ? 'lavarock' : e.look, e.x, e.y, e.r, e.big);
         this.fx.bubble(e.x, e.y, e.r);
-        this.fx.debris(e.x, e.y, e.r, this.groundColors(e.x, e.y, e.r));
+        if (!lavaSS) this.fx.debris(e.x, e.y, e.r, this.groundColors(e.x, e.y, e.r));
         this.shake = Math.max(this.shake, e.r / (e.big ? 3 : 6));
         this.sfx.boom(e.r);
         this.focus = { x: e.x, y: e.y };
@@ -1235,8 +1228,8 @@ export class Game {
       for (const c of this.clones) c.life--;
       for (const j of this.jaws) j.life--;
       for (const e of this.rising) e.life--;
+      for (const e of this.erupts) { e.life--; if (e.vy) e.y += e.vy; }
       for (const b of this.bolts) b.life--;
-      for (const c of this.cracks) c.life--;
       if (this.flash) this.flash.life--;
       this.pAcc--;
     }
@@ -1244,8 +1237,8 @@ export class Game {
     this.clones = this.clones.filter(c => c.life > 0);
     this.jaws = this.jaws.filter(j => j.life > 0);
     this.rising = this.rising.filter(e => e.life > 0);
+    this.erupts = this.erupts.filter(e => e.life > 0);
     this.bolts = this.bolts.filter(b => b.life > 0);
-    this.cracks = this.cracks.filter(c => c.life > 0);
     if (this.flash && this.flash.life <= 0) this.flash = null;
     this.shake *= Math.pow(0.02, dt);
     // SS darkens the battlefield while the shot is in the air
@@ -1364,10 +1357,11 @@ export class Game {
       if (p.sprite && p.look !== 'quake') this.drawShotSprite(ctx, p);
       else drawProjectile(ctx, p.look, p.x, p.y, p.vx, p.vy, this.time);
     }
-    for (const c of this.cracks) this.drawCracks(ctx, c);
     this.fx.draw(ctx);
     for (const j of this.jaws) this.drawJaw(ctx, j);
     for (const e of this.rising) this.drawRising(ctx, e);
+    for (const e of this.erupts) if (e.flat) this.drawErupt(ctx, e);
+    for (const e of this.erupts) if (!e.flat) this.drawErupt(ctx, e);
     this.drawBolts(ctx);
     drawWater(ctx, this.map, this.waterY, this.time);
     const act = this.tank(this.activeId);
@@ -1787,7 +1781,19 @@ export class Game {
       case 'kylan': this.beams.push({ x, y, life: 70, max: 70, wide: 90 }); fx.sparkle(x, y - 20, '#fff6c4'); fx.sparkle(x, y - 40, '#b9f4ff'); burst(40, '#fff3a0', 5, 60, 4, -0.03); break;
       case 'kimquy': for (let i = 0; i < 3; i++) fx.add({ x, y, ring: true, life: 30 + i * 8, max: 30 + i * 8, r: 10 + i * 12, grow: 3 + i, color: '#ffcf3a' }); burst(30, '#ffe16a', 7, 40, 3); break;
       case 'phuong': for (let i = 0; i < 40; i++) fx.flame(x + (Math.random() - 0.5) * r * 2, y); burst(50, '#ff7a1a', 8, 45, 5, 0.05); this.flash = { color: '#ff7a1a', life: 14, max: 14 }; break;
-      case 'voi': this.cracks.push({ x, y, life: 80, max: 80, lines: makeCracks(x, y, r) }); this.shake = 22; fx.debris(x, y, 50, '#3a3238'); column('#ff7a1a', 5, 40); column('#ffd23a', 3, 20); this.flash = { color: '#ff5a10', life: 12, max: 12 }; break;
+      case 'voi': {
+        // painted fissure and slab only: the old code-drawn crack lines spread into thin air on bridges and ledges
+        this.shake = 22; this.flash = { color: '#ff5a10', life: 12, max: 12 };
+        const L = ASSETS.fx.lava;
+        if (L) {
+          this.erupts.push({ img: L[5], x, y: y + 6, w: 150, life: 90, max: 90, flat: true });
+          this.erupts.push({ img: L[8], x, y: y - 30, w: 160, life: 80, max: 80, puff: true, vy: -0.5 });
+          this.erupts.push({ img: L[1], x: x - 8, y: y + 4, w: 120, life: 60, max: 60 });
+          this.erupts.push({ img: L[3], x: x + 12, y: y + 6, w: 120, life: 70, max: 70 });
+        }
+        column('#ffd23a', 4, 24);
+        break;
+      }
       case 'bachtuoc': this.rising.push({ key: 'bachtuoc', x, y, life: 55, max: 55, size: r * 2.4 }); burst(30, '#b765d8', 6, 50, 5); break;
       case 'bocap':
         for (let i = 0; i < 40; i++) fx.add({ x: x + (Math.random() - 0.5) * r * 1.5, y: y - Math.random() * r, vx: (Math.random() - 0.5) * 0.8, vy: -0.4 - Math.random() * 0.6, g: 0, drag: 0.99, life: 90, max: 90, r: 10 + Math.random() * 14, color: 'rgba(80,230,110,0.35)', smoke: true });
@@ -1796,6 +1802,42 @@ export class Game {
       case 'camap': this.rising.push({ key: 'camap', x, y, life: 50, max: 50, size: r * 2.2 }); this.shake = 16; break;
       case 'tethien': burst(40, '#ffd700', 7, 50, 4); fx.sparkle(x, y - 20, '#ffd700'); this.flash = { color: '#ffd700', life: 12, max: 12 }; break;
     }
+  }
+
+  // One pulse of Tượng Tinh's quake: a lava fissure opens, basalt spikes or a lava geyser shoot up, dust rolls out.
+  quakePulse(e) {
+    const L = ASSETS.fx.lava, n = (this.quakeN = (this.quakeN || 0) + 1), { x, y } = e;
+    this.erupts.push({ img: L[6], x, y: y + 3, w: 84, life: 75, max: 75, flat: true });
+    this.erupts.push({ img: L[7], x, y: y + 4, w: 96, life: 28, max: 28, puff: true });
+    if (n % 2) this.erupts.push({ img: L[n % 4 === 1 ? 3 : 4], x, y: y + 5, w: n % 4 === 1 ? 80 : 60, life: 46, max: 46 });
+    else this.erupts.push({ img: L[[0, 2, 1][(n / 2) % 3]], x, y: y + 4, w: 56, life: 40, max: 40 });
+    for (let i = 0; i < 8; i++) this.fx.add({ x: x + (Math.random() - 0.5) * 16, y, vx: (Math.random() - 0.5) * 2.4, vy: -2.5 - Math.random() * 3.5, g: 0.22, drag: 0.98, life: 34, max: 34, r: 1.6 + Math.random() * 2.2, color: i % 3 ? '#ff8a2a' : '#ffe07a', glow: true });
+    this.shake = Math.max(this.shake, 6);
+    this.sfx.boom(e.r * 0.7);
+    this.focus = { x, y };
+  }
+
+  // painted effect anchored at its bottom centre: pops up with a little overshoot, then sinks back into the ground
+  // (flat = fissures and slabs that stretch open; puff = dust/smoke that swells and fades)
+  drawErupt(ctx, e) {
+    const p = 1 - e.life / e.max, img = e.img, k = e.w / img.width, w = e.w, h = img.height * k;
+    let sx = 1, sy = 1, a = 1;
+    if (e.puff) { sx = sy = 0.6 + p * 0.7; a = p < 0.15 ? p / 0.15 : (1 - p) / 0.85; }
+    else if (e.flat) { sx = Math.min(1, 0.25 + p * 6); sy = Math.min(1, p * 8); a = p > 0.7 ? (1 - p) / 0.3 : 1; }
+    else {
+      const up = Math.min(1, p / 0.18), down = p > 0.72 ? (p - 0.72) / 0.28 : 0;
+      sy = up < 1 ? up * 1.15 : 1 + 0.15 * Math.max(0, 1 - (p - 0.18) / 0.1); sy *= 1 - down;
+      sx = 1 - 0.12 * (1 - up);
+      a = down ? 1 - down * 0.6 : 1;
+    }
+    if (sy <= 0.01) return;
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, Math.min(1, a));
+    ctx.translate(e.x, e.y);
+    ctx.scale(sx, sy);
+    drawSmooth(ctx, img, -w / 2, -h, w, h);
+    ctx.restore();
+    ctx.globalAlpha = 1;
   }
 
   // Big SS sprite (tentacle, shark jaw) bursting up out of the ground at the blast.
@@ -1812,15 +1854,6 @@ export class Game {
     ctx.rotate(-Math.PI / 2 * (e.key === 'camap' ? 1 : 0.6));
     drawSmooth(ctx, img, -w / 2, -h / 2, w, h);
     ctx.restore();
-    ctx.globalAlpha = 1;
-  }
-
-  drawCracks(ctx, c) {
-    ctx.globalAlpha = Math.min(1, (c.life / c.max) * 2);
-    ctx.strokeStyle = '#1c120e'; ctx.lineWidth = 4; ctx.lineCap = 'round';
-    for (const line of c.lines) { ctx.beginPath(); line.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); ctx.stroke(); }
-    ctx.strokeStyle = '#ffb030'; ctx.lineWidth = 1.5;
-    for (const line of c.lines) { ctx.beginPath(); line.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); ctx.stroke(); }
     ctx.globalAlpha = 1;
   }
 

@@ -16,7 +16,7 @@ export const SEATS = {
   gau: [0.38, 0.36, 0.5], canhcut: [0.36, 0.2, 0.55], tho: [0.43, 0.5, 0.44],
 };
 
-export const ASSETS = { xe: {}, pilot: {}, pilotClassic: {}, bg: {}, proj: {}, terrain: {}, icons: {}, outfit: { h: {}, g: {}, s: {} }, ready: false };
+export const ASSETS = { xe: {}, pilot: {}, pilotClassic: {}, bg: {}, proj: {}, terrain: {}, icons: {}, outfit: { h: {}, g: {}, s: {} }, fx: {}, ready: false };
 const composites = new Map();
 export const resetComposites = () => composites.clear();
 // Pilot layering (user feedback 2026-10-01: arms and legs pasted over the animal looked clumsy).
@@ -335,6 +335,10 @@ const PROJ_FIXES = [
   // Bọ Cạp S1 keeps the venom stinger: the new sheet drew whole scorpions for both S1 and SS
   { src: '/assets/sheets/proj-d.jpg', green: false, n: 2, cells: [['bocap', 's1'], null, null, null] },
 ];
+// Tượng Tinh's quake (2026-10-01, the beige puffs looked cheap): 0-2 lava geysers, 3 rock-spike cluster, 4 single
+// spike, 5 heaving slab, 6 ground fissure, 7 dust ring, 8 smoke cloud (art-src/fx-lava-quake-v1)
+const FX_SHEETS = [{ key: 'lava', src: '/assets/sheets/fx-lava.jpg', green: false }];
+
 // bronze copy of a sprite (Kim Quy's Tên Đồng reuses the golden Vạn Tiễn arrow; the sheet drew S1 with its bow)
 function bronze(src) {
   const c = document.createElement('canvas'); c.width = src.width; c.height = src.height;
@@ -377,6 +381,13 @@ async function loadProjectiles() {
       if (Array.isArray(cell)) { const [xe, shot] = cell; (ASSETS.proj[xe] ||= {})[shot] = sprite; }
       else ASSETS.projNew[cell] = sprite;
     });
+  }));
+  // painted effect sheets: 3x3 grids, each sprite's bottom edge is its ground line
+  await Promise.all(FX_SHEETS.map(async sh => {
+    const img = await loadImg(sh.src);
+    if (!img) return;
+    const sheet = cutOut(img, sh.green, false, true), cw = 1000 / 3, m = 18;
+    ASSETS.fx[sh.key] = Array.from({ length: 9 }, (_, i) => cropBox(sheet, [(i % 3) * cw + m, Math.floor(i / 3) * cw + m, (i % 3 + 1) * cw - m, (Math.floor(i / 3) + 1) * cw - m], [], [1000, 1000]));
   }));
 }
 
