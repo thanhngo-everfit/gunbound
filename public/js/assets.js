@@ -683,7 +683,7 @@ export function pilotImage(look) {
   if (!base || (!L.c && !L.g && !L.s)) return base;
   if (dressed.has(look)) return dressed.get(look);
   const fit = PILOT_FIT[L.pilot] || PILOT_FIT.m, W = base.width, H = base.height;
-  const padT = Math.round(H * 0.35), padL = Math.round(W * 0.25), padR = Math.round(W * 0.1);
+  const padT = Math.round(H * 0.35), padL = Math.round(W * 0.45), padR = Math.round(W * 0.1);
   const c = document.createElement('canvas');
   c.width = W + padL + padR; c.height = H + padT;
   const x = c.getContext('2d');
@@ -692,7 +692,12 @@ export function pilotImage(look) {
   // hair colour: the pilot's own hair, dyed in place
   const hair = L.c ? hairLayers(L.pilot, L.pilot, L.c, W, H, padL, padT, c.width, c.height) : null;
   // behind the pilot: the superhero's cape
-  if (T?.cape && ASSETS.outfit.cape) { const w = W * 0.5; at(ASSETS.outfit.cape, fit.back[0] * W - w * 0.18, fit.back[1] * H - w * 0.05, w, 0); }
+  // its right clasp hangs on the far side of the collar, hidden behind the neck, so the cape comes out from under the
+  // tee and flows back (user, 2026-10-01: the old flap at mid-back "không liền với áo")
+  if (T?.cape && ASSETS.outfit.cape) {
+    const cape = ASSETS.outfit.cape, [ax, ay, rot, cwk] = fit.cape || [0.42, 0.5, 0.35, 0.62], w = W * cwk, h = (cape.height / cape.width) * w;
+    x.save(); x.translate(padL + ax * W, padT + ay * H); x.rotate(rot); x.drawImage(cape, -w * 0.9, -h * 0.06, w, h); x.restore();
+  }
   x.drawImage(T ? paintTop(base, fit, L.s) : base, padL, padT);
   if (hair) x.drawImage(hair.back, 0, 0);
   if (hair) x.drawImage(hair.front, 0, 0);
@@ -860,3 +865,4 @@ async function loadAll() {
   ASSETS.ready = true;
   return ASSETS;
 }
+window.__capeTune = (id, v) => { PILOT_FIT[id].cape = v; dressed.clear(); }; // DEBUG
