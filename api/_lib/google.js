@@ -1,8 +1,8 @@
 // Google Sign-In for @everfit.io accounts: verifies the ID token from Google Identity Services (signature,
-// audience, verified email, Workspace domain). Same OAuth client and rules as the Roadmap dashboard project.
+// audience, verified email, Workspace domain). Same rules as the Roadmap dashboard project, with the game's own OAuth client ("Thú Chiến").
 import { OAuth2Client } from 'google-auth-library';
 
-export const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '292601272916-9kkgsjlp8fdo9eskuj0lelufve2h7cvq.apps.googleusercontent.com';
+export const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '447903417219-s7v9b18lmq6ppj2fmfo3m24rm53ipv9u.apps.googleusercontent.com';
 export const ALLOWED_DOMAIN = process.env.ALLOWED_DOMAIN || 'everfit.io';
 const client = new OAuth2Client(GOOGLE_CLIENT_ID);
 

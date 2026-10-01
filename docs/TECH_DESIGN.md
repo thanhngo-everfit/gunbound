@@ -68,7 +68,7 @@ User: "build server to deploy to vercel, not in my local", on free plans. Vercel
 ## 2c. Login: Google, @everfit.io only (2026-10-01)
 
 User: "cần google login, và chỉ login được với account @everfit.io … mỗi account google chỉ link 1 1 tài khoản, ko cần pin, cần nhập tên là được; sau khi có tài khoản rồi thì không show màn hình chọn nhân vật và nhập tên nữa".
-- **Client** (`app.js`): Google Identity Services button with `hd: everfit.io` and `auto_select`. The client id comes from `/api/config` and is the Roadmap dashboard project's OAuth client.
+- **Client** (`app.js`): Google Identity Services button with `hd: everfit.io` and `auto_select`. The client id comes from `/api/config`: the game's own OAuth client "Thú Chiến" (`447903417219-…`), created 2026-10-01.
   - First visit: the server answers `needName`, and the login card switches to "choose a pilot and a name" (the name is prefilled from the Google given name).
   - After that, the session token in localStorage logs straight into the lobby.
   - Pilot changes in the room are saved on the account.
