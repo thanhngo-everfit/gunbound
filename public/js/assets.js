@@ -566,6 +566,24 @@ function hairOf(id) {
     if (inCheek(px, py) && (sat < 0.33 || (twin && h < 100))) continue;
     // dark shading and ink on top of the skull belong to the hair too
     if (is(h, sat, v) || (py < (hy + 0.02) * H && v < 0.35)) hair[i] = 1;
+    // pale warm shine streaks high on the skull (no skin up there)
+    else if (py < (hy - 0.03) * H && h >= 8 && h <= 60 && sat > 0.12 && v > 0.8) hair[i] = 1;
+  }
+  // bangs that hang into the face box: hair-coloured pixels there joined to the hair outside it
+  // (the brows are hair-coloured too, but skin separates them from the bangs)
+  const stack = [];
+  for (let py = 1; py < H - 1; py++) for (let px = 1; px < W - 1; px++) {
+    const i = py * W + px;
+    if (hair[i] && (inFace(px + 1, py) || inFace(px - 1, py) || inFace(px, py + 1))) stack.push(i);
+  }
+  while (stack.length) {
+    const i = stack.pop();
+    for (const q of [i - 1, i + 1, i - W, i + W]) {
+      const qx = q % W, qy = (q / W) | 0;
+      if (hair[q] || !inFace(qx, qy) || d[q * 4 + 3] < 160) continue;
+      const [h, sat, v] = hsv(d[q * 4], d[q * 4 + 1], d[q * 4 + 2]);
+      if (is(h, sat, v)) { hair[q] = 1; stack.push(q); }
+    }
   }
   // grow into the ink around the hair (so the old outline goes with it)
   const mask = new Float32Array(W * H), R = Math.max(4, Math.round(W * 0.028));
