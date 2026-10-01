@@ -531,9 +531,9 @@ function hairOf(id) {
   const d = x.getImageData(0, 0, W, H).data, is = IS_HAIR[HAIR_KIND[id]];
   const [[nx, ny], [fx]] = fit.eyes, [hx, hy, hr, ht] = fit.head;
   // the face box: eyes, brows and cheeks stay with the face (brows are hair-coloured)
-  // brows and eyes across the face, the cheeks (blush is pink too) a little narrower so side locks still count as hair
-  const inFace = (px, py) => (py > (ny - 0.085) * H && py < (ny + 0.05) * H && px > (nx - 0.08) * W && px < (fx + 0.05) * W)
-    || (py >= (ny + 0.05) * H && py < (ny + 0.14) * H && px > (nx - 0.06) * W && px < (fx + 0.025) * W);
+  // brows and eyes are never hair; on the cheeks only strongly coloured pixels are (blush is a paler pink than hair)
+  const inFace = (px, py) => py > (ny - 0.085) * H && py < (ny + 0.05) * H && px > (nx - 0.08) * W && px < (fx + 0.05) * W;
+  const inCheek = (px, py) => py >= (ny + 0.05) * H && py < (ny + 0.14) * H && px > (nx - 0.06) * W && px < (fx + 0.06) * W;
   const hair = new Uint8Array(W * H);
   // hair lives above the chin, except twin tails that hang beside the body
   const chin = (ny + 0.12) * H, tails = id === 'f2' ? 0.88 * H : 0;
@@ -542,6 +542,7 @@ function hairOf(id) {
     const i = py * W + px, j = i * 4;
     if (d[j + 3] < 160 || inFace(px, py) || !inZone(px, py)) continue;
     const [h, sat, v] = hsv(d[j], d[j + 1], d[j + 2]);
+    if (inCheek(px, py) && sat < 0.33) continue;
     // dark shading and ink on top of the skull belong to the hair too
     if (is(h, sat, v) || (py < (hy + 0.02) * H && v < 0.35)) hair[i] = 1;
   }
@@ -550,7 +551,7 @@ function hairOf(id) {
   for (let py = 0; py < H; py++) for (let px = 0; px < W; px++) {
     const i = py * W + px, j = i * 4;
     if (hair[i]) { mask[i] = 1; continue; }
-    if (d[j + 3] < 40 || inFace(px, py) || !inZone(px, py)) continue;
+    if (d[j + 3] < 40 || inFace(px, py) || inCheek(px, py) || !inZone(px, py)) continue;
     const lum = (d[j] + d[j + 1] + d[j + 2]) / 3;
     if (lum > 150) continue;
     let near = false;
@@ -630,9 +631,21 @@ export function pilotImage(look) {
     const lw = W * 0.009, [[nx, ny], [fx, fy], [ex, ey], lr] = fit.eyes;
     drawGlasses(x, L.g, { nx: padL + nx * W, ny: padT + ny * H, fx: padL + fx * W, fy: padT + fy * H, ex: padL + ex * W, ey: padT + ey * H, r: lr * W, lw });
   }
-  Object.assign(c, { baseW: W, baseH: H, padL, padT });
-  dressed.set(look, c);
-  return c;
+  // trim the unused padding so previews fill their frame like the bare pilot does
+  const t = trimmed(c);
+  Object.assign(t, { baseW: W, baseH: H, padL: padL - t.trimX, padT: padT - t.trimY });
+  dressed.set(look, t);
+  return t;
+}
+
+function trimmed(c) {
+  const d = c.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, c.width, c.height).data;
+  let x0 = c.width, y0 = c.height, x1 = -1, y1 = -1;
+  for (let y = 0; y < c.height; y++) for (let x = 0; x < c.width; x++) if (d[(y * c.width + x) * 4 + 3] > 8) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+  if (x1 < 0) return Object.assign(c, { trimX: 0, trimY: 0 });
+  const out = document.createElement('canvas'); out.width = x1 - x0 + 1; out.height = y1 - y0 + 1;
+  out.getContext('2d').drawImage(c, -x0, -y0);
+  return Object.assign(out, { trimX: x0, trimY: y0 });
 }
 
 // Animal + pilot merged into one canvas. animalH lets callers size by the animal, not the rider.
