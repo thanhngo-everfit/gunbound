@@ -18,7 +18,7 @@ app.use(express.json({ limit: '1mb' }));
 app.use(express.text({ type: 'text/plain' }));
 
 // --- tiny Redis ---
-const kv = new Map(), hashes = new Map(), sets = new Map(), ttl = new Map();
+const kv = new Map(), hashes = new Map(), sets = new Map(), lists = new Map(), ttl = new Map();
 const alive = k => { const t = ttl.get(k); if (t && t < Date.now()) { kv.delete(k); ttl.delete(k); } return kv.has(k); };
 function run([cmd, ...a]) {
   switch (String(cmd).toUpperCase()) {
@@ -37,6 +37,9 @@ function run([cmd, ...a]) {
     case 'HGETALL': return [...(hashes.get(a[0]) || [])].flat();
     case 'SADD': { const st = sets.get(a[0]) || new Set(); sets.set(a[0], st); let n = 0; for (const m of a.slice(1)) if (!st.has(m)) { st.add(m); n++; } return n; }
     case 'SMEMBERS': return [...(sets.get(a[0]) || [])];
+    case 'LPUSH': { const l = lists.get(a[0]) || []; lists.set(a[0], l); l.unshift(...a.slice(1)); return l.length; }
+    case 'LTRIM': { const l = lists.get(a[0]) || []; lists.set(a[0], l.slice(Number(a[1]), Number(a[2]) + 1)); return 'OK'; }
+    case 'LRANGE': return (lists.get(a[0]) || []).slice(Number(a[1]), Number(a[2]) + 1);
     case 'SCAN': { const i = a.indexOf('MATCH'), re = new RegExp('^' + (i >= 0 ? a[i + 1] : '*').replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*') + '$'); return ['0', [...kv.keys()].filter(k => alive(k) && re.test(k))]; }
   }
   throw new Error(`unsupported ${cmd}`);

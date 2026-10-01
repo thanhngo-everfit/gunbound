@@ -3,13 +3,19 @@
 // - login, lobby, room list, ranks: Vercel functions in /api (Redis behind them)
 // - a room lives in its host's browser: a worker runs server/room.js and this page relays it over Ably
 //   (channel tc:room:<id>; guests publish "c" commands, the host publishes "b" batches of events and "a" acks)
-// Ably's free plan is plenty for an office: the host sends at most 20 batched messages a second.
+// Ably's free plan is plenty for an office: the host sends at most ~15 batched messages a second.
+// Reliability (2026-10-01, user: "chơi liên tục bị đơ"): batches are numbered, the host repeats the last number
+// every few seconds, and a guest that sees a gap asks the host for the whole match again ("sync"). Commands
+// without a callback (aim, move…) get no ack, and acks ride inside the batches.
 import { pidOf } from '/shared/ids.js';
+import { reportError } from './game.js';
 
 const CHUNK = 45000;           // keep each Ably message well under its 64 KB limit
 const ACK_TIMEOUT_MS = 9000;
 const HOST_GONE_MS = 12000;    // a host that drops this long closes the room
 const LOBBY_POLL_MS = 30000;
+const SEQ_BEAT_MS = 3000;       // host: "the last batch was #n", so a guest can notice it missed the final one
+const RESYNC_GAP_MS = 4000;    // guest: at most one resync request this often
 
 const api = async (path, opts) => {
   const r = await fetch(path, opts && { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(opts) });
@@ -42,11 +48,12 @@ export class AblySocket {
   fire(ev, data) { for (const fn of [...(this.listeners.get(ev) || [])]) { try { fn(data); } catch (e) { console.error(e); } } }
 
   emit(ev, data, ack) {
-    const done = typeof ack === 'function' ? ack : () => {};
-    this.handle(ev, data || {}, done).catch(e => { console.error(e); done({ error: `Lỗi kết nối: ${e.message || e}` }); });
+    const cb = typeof ack === 'function' ? ack : null;
+    this.handle(ev, data || {}, cb).catch(e => { console.error(e); cb?.({ error: `Lỗi kết nối: ${e.message || e}` }); });
   }
 
-  async handle(ev, data, ack) {
+  async handle(ev, data, cb) {
+    const ack = cb || (() => {});
     switch (ev) {
       case 'hello': return ack(await this.hello(data));
       case 'lobby:get': return this.refreshLobby();
@@ -64,8 +71,8 @@ export class AblySocket {
       case 'player:gender':
         // remember the pilot on the account, then tell the room
         if (this.me) { this.me.gender = data.gender; api('/api/login', { token: this.me.token, gender: data.gender }).catch(() => {}); }
-        return this.room ? this.command(ev, data, ack) : undefined;
-      default: return this.command(ev, data, ack);
+        return this.room ? this.command(ev, data, cb) : undefined;
+      default: return this.command(ev, data, cb);
     }
   }
 
@@ -111,7 +118,9 @@ export class AblySocket {
     const chan = this.ably.channels.get(`tc:room:${reg.id}`);
     this.room = { id: reg.id, chan, host: this.me.name, hostPid: this.me.pid, isHost: true, worker, info };
     worker.onmessage = e => this.fromWorker(e.data);
-    worker.onerror = e => { console.error('host worker', e); };
+    worker.onerror = e => reportError('host worker', e.error || e.message || e);
+    const hosted = this.room;
+    hosted.beat = setInterval(() => { if (hosted.seq) chan.publish('h', { seq: hosted.seq }).catch(() => {}); }, SEQ_BEAT_MS);
     chan.subscribe('c', msg => worker.postMessage({ type: 'cmd', name: msg.clientId, ev: msg.data.ev, data: msg.data.data, ackId: msg.data.ackId }));
     chan.presence.subscribe(['enter', 'leave'], m => { if (m.clientId !== this.me.name) worker.postMessage({ type: 'presence', name: m.clientId, action: m.action }); });
     await chan.presence.enter({ host: true });
@@ -138,6 +147,8 @@ export class AblySocket {
       r.info = m.info;
       clearTimeout(r.infoTimer);
       r.infoTimer = setTimeout(() => this.pushInfo(), m.type === 'heartbeat' ? 0 : 1200);
+    } else if (m.type === 'error') {
+      reportError(m.where, Object.assign(new Error(m.message), { stack: m.stack }));
     } else if (m.type === 'needProfile') {
       (r.needNames ||= new Set()).add(m.name);
       clearTimeout(r.profileTimer);
@@ -163,16 +174,20 @@ export class AblySocket {
     if (profiles && this.room === r) r.worker.postMessage({ type: 'profiles', profiles });
   }
 
-  // publish in order; big payloads are deflated and split into chunks
+  // Publish in order, numbered; big payloads are deflated and split into chunks. Ably keeps a connection's
+  // messages in order, so nothing waits for the previous publish to be acknowledged (waiting made a backlog that
+  // grew whenever events came faster than the round trip, and everyone saw the match lag further and further).
   publish(name, items) {
-    const chan = this.room?.chan;
+    const r = this.room, chan = r?.chan;
     if (!chan) return;
     this.outbox = this.outbox.then(async () => {
+      const seq = (r.seq = (r.seq || 0) + 1);
+      const send = (n, d) => chan.publish(n, d).catch(e => reportError('publish', e));
       const json = JSON.stringify(items);
-      if (json.length < CHUNK) return chan.publish(name, { items });
+      if (json.length < CHUNK) return send(name, { items, seq });
       const z = await deflate(json), id = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, n = Math.ceil(z.length / CHUNK);
-      for (let i = 0; i < n; i++) await chan.publish('z', { id, i, n, kind: name, part: z.slice(i * CHUNK, (i + 1) * CHUNK) });
-    }).catch(e => console.error('publish', e));
+      for (let i = 0; i < n; i++) send('z', { id, i, n, kind: name, seq, part: z.slice(i * CHUNK, (i + 1) * CHUNK) });
+    }).catch(e => reportError('publish', e));
   }
 
   // ---------- joining someone else's room ----------
@@ -196,7 +211,7 @@ export class AblySocket {
       if (m.action === 'leave') r.goneTimer = setTimeout(() => this.roomClosed(r, 'Chủ phòng đã mất kết nối, phòng đã đóng.'), HOST_GONE_MS);
     });
     await chan.presence.enter({ pid: this.me.pid });
-    const res = await this.command('join', { gender: this.me.gender });
+    const res = await this.command('join', { gender: this.me.gender }, null, true);
     if (res?.ok) sessionStorage.setItem('tc-room', id);
     else { await this.detach(r); if (silent) return null; }
     return res;
@@ -205,6 +220,7 @@ export class AblySocket {
   fromHost(r, msg) {
     if (msg.clientId !== r.host || this.room !== r) return;
     if (msg.name === 'closed') return this.roomClosed(r, 'Chủ phòng đã đóng phòng.');
+    if (msg.name === 'h') { if (r.lastSeq != null && msg.data.seq > r.lastSeq) this.resync(r, `beat ${msg.data.seq} > ${r.lastSeq}`); return; }
     let job;
     if (msg.name === 'z') {
       const { id, i, n, kind, part } = msg.data;
@@ -212,8 +228,9 @@ export class AblySocket {
       got.parts[i] = part; this.parts.set(id, got);
       if (got.parts.filter(Boolean).length < n) return;
       this.parts.delete(id);
+      this.checkSeq(r, msg.data.seq);
       job = inflate(got.parts.join('')).then(JSON.parse);
-    } else if (msg.name === 'b' || msg.name === 'a') job = Promise.resolve(msg.data.items);
+    } else if (msg.name === 'b' || msg.name === 'a') { this.checkSeq(r, msg.data.seq); job = Promise.resolve(msg.data.items); }
     else return;
     this.inbox = this.inbox.then(() => job).then(items => {
       for (const it of items) {
@@ -223,17 +240,37 @@ export class AblySocket {
     }).catch(e => console.error('inbox', e));
   }
 
-  // a room command: straight into the worker when we host, over Ably otherwise
-  command(ev, data, ack) {
+  // a numbered batch arrived: a jump means one got lost, so ask for the whole match again
+  checkSeq(r, seq) {
+    if (seq == null) return;
+    if (r.lastSeq != null && seq > r.lastSeq + 1) this.resync(r, `got ${seq} after ${r.lastSeq}`);
+    r.lastSeq = Math.max(r.lastSeq ?? 0, seq);
+  }
+
+  resync(r, why) {
+    const now = Date.now();
+    if (now - (r.resyncAt || 0) < RESYNC_GAP_MS) return;
+    r.resyncAt = now;
+    console.warn('resync', why);
+    this.command('sync', {});
+  }
+
+  // a room command: straight into the worker when we host, over Ably otherwise. Only commands whose caller
+  // wants an answer carry an ackId (aim and move updates don't, which halves the traffic while aiming).
+  command(ev, data, ack, wantAck = !!ack) {
     const r = this.room;
     return new Promise(resolve => {
       const done = res => { ack?.(res); resolve(res); };
       if (!r) return done({ error: 'Không ở trong phòng' });
-      const ackId = ++this.ackSeq;
-      this.acks.set(ackId, done);
-      setTimeout(() => { if (this.acks.delete(ackId)) done({ error: 'Chủ phòng không phản hồi' }); }, ACK_TIMEOUT_MS);
+      let ackId;
+      if (wantAck) {
+        ackId = ++this.ackSeq;
+        this.acks.set(ackId, done);
+        setTimeout(() => { if (this.acks.delete(ackId)) done({ error: 'Chủ phòng không phản hồi' }); }, ACK_TIMEOUT_MS);
+      }
       if (r.isHost) r.worker.postMessage({ type: 'cmd', name: this.me.name, ev, data, ackId });
-      else r.chan.publish('c', { ev, data, ackId });
+      else r.chan.publish('c', { ev, data, ackId }).catch(e => reportError(`send ${ev}`, e));
+      if (!wantAck) done(undefined);
     });
   }
 
@@ -250,7 +287,7 @@ export class AblySocket {
       api('/api/rooms', { s: this.me.token, action: 'delete', id: r.id }).catch(() => {});
       this.lobby?.publish('changed', { id: r.id });
     } else {
-      await this.command('room:leave', {});
+      await this.command('room:leave', {}, null, true);
     }
     await this.detach(r);
     this.refreshLobby();
@@ -258,7 +295,7 @@ export class AblySocket {
 
   async detach(r) {
     if (this.room === r) this.room = null;
-    clearTimeout(r.goneTimer); clearTimeout(r.infoTimer);
+    clearTimeout(r.goneTimer); clearTimeout(r.infoTimer); clearInterval(r.beat);
     try { r.chan.unsubscribe(); r.chan.presence.unsubscribe(); await r.chan.presence.leave(); await r.chan.detach(); } catch {}
   }
 

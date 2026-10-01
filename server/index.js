@@ -29,6 +29,8 @@ app.use('/shared', express.static(path.join(ROOT, 'shared')));
 // Local play (npm run dev) logs in by name only, no Google (user, 2026-10-01: "gỡ google login trên bản local");
 // GOOGLE_LOGIN=1 turns the Google sign-in back on. The Vercel build always uses Google (api/login.js).
 const LOCAL_LOGIN = process.env.GOOGLE_LOGIN !== '1';
+// client error reports (the Vercel build keeps them in Redis, see api/log.js); here they go to this terminal
+app.post('/api/log', express.json({ limit: '8kb' }), (req, res) => { console.error('[client]', req.body?.where, req.body?.message, '\n', req.body?.stack); res.json({ ok: true }); });
 app.get('/api/config', (req, res) => res.json({ mode: 'socket', localLogin: LOCAL_LOGIN, googleClientId: GOOGLE_CLIENT_ID, domain: ALLOWED_DOMAIN }));
 const server = http.createServer(app);
 const io = new Server(server);

@@ -5,11 +5,13 @@ import { Room } from '/server/room.js';
 import { MAP_IDS, registerMask } from '/shared/physics.js';
 import { pidOf, cleanGender } from '/shared/ids.js';
 
-const BATCH_MS = 50;
+const BATCH_MS = 66;            // ~15 batches a second at most, and only while something happens
+const WATCHDOG_MS = 2000;
 const HEARTBEAT_MS = 20000;
 const RECONNECT_GRACE_MS = 60000;
 
 let room = null;
+let hostPid = null;
 const players = new Map(); // pid -> player (token = pid; it never leaves this worker)
 const profiles = new Map(), asked = new Set();
 const graces = new Map();
@@ -17,6 +19,11 @@ let queue = [];
 
 const post = m => postMessage(m);
 const send = item => queue.push(item);
+// acks for guests ride in the next batch instead of a message of their own; the host's own go straight back
+const ack = (to, ackId, res) => (to === hostPid ? post({ type: 'ack', to, ackId, res }) : send({ to, ackId, res }));
+const report = (where, e) => post({ type: 'error', where, message: String(e?.message || e), stack: String(e?.stack || '') });
+self.addEventListener('error', e => report('worker', e.error || e.message));
+self.addEventListener('unhandledrejection', e => report('worker-promise', e.reason));
 // coalesce a batch: of several game:pos / game:aim for the same xe only the last one matters
 function flush() {
   if (!queue.length) return;
@@ -28,6 +35,26 @@ function flush() {
 }
 setInterval(flush, BATCH_MS);
 setInterval(() => room && post({ type: 'heartbeat', info: room.info() }), HEARTBEAT_MS);
+
+// Watchdog: if a timer callback threw (the turn never ends, or the replay never hands over), move the match on
+// instead of leaving everyone frozen, and report what happened.
+let stuckKey = '', stuckSince = 0;
+setInterval(() => {
+  const g = room?.game;
+  if (!g || !g.turn) return;
+  const key = `${g.phase}:${g.turnNo}:${g.turn.id}`, now = Date.now();
+  if (key !== stuckKey) { stuckKey = key; stuckSince = now; return; }
+  try {
+    if (g.phase === 'turn' && now > g.turn.endsAt + 8000) {
+      report('watchdog', new Error(`turn ${g.turnNo} overran its clock`));
+      const t = g.tanks.find(t => t.id === g.turn.id);
+      if (t) room.skip(t, true); else room.nextTurn();
+    } else if (g.phase === 'anim' && now - stuckSince > 45000) {
+      report('watchdog', new Error(`replay of turn ${g.turnNo} never handed over`));
+      room.nextTurn();
+    }
+  } catch (e) { report('watchdog', e); }
+}, WATCHDOG_MS);
 
 // Socket.IO look-alikes for Room: a broadcast "io" and one "socket" per player
 const io = { to: () => ({ emit: (ev, data) => send({ ev, data }), except: sid => ({ emit: (ev, data) => send({ ev, data, except: sid }) }) }) };
@@ -84,6 +111,8 @@ const commands = {
   'game:aim'(p, d) { room.aim(p, d); },
   'game:fire'(p, d) { room.fire(p, d); },
   'game:pass'(p) { const t = room.activeTank(p); if (t) room.skip(t, false); },
+  // a guest that missed a batch asks for the whole match again
+  sync(p) { room.sendGameTo(p); },
 };
 
 function reconnect(p) {
@@ -97,6 +126,7 @@ onmessage = async ({ data: m }) => {
     await loadMasks();
     room = new Room(m.id, m.name, io, () => post({ type: 'info', info: room.info() }), m.practice, hooks);
     const host = playerFor(m.host.name, m.host.gender);
+    hostPid = host.pid;
     post({ type: 'ack', to: host.pid, ackId: m.ackId, res: room.join(host) });
     return;
   }
@@ -121,7 +151,7 @@ onmessage = async ({ data: m }) => {
     let res;
     if (!fn) res = { error: 'Lệnh không hợp lệ' };
     else if (!p || (m.ev !== 'join' && !room.members.has(p.token))) res = { error: 'Không ở trong phòng' };
-    else { try { res = fn(p, m.data || {}); } catch (e) { console.error(e); res = { error: String(e.message || e) }; } }
-    if (m.ackId != null) post({ type: 'ack', to: pidOf(m.name), ackId: m.ackId, res: res ?? null });
+    else { try { res = fn(p, m.data || {}); } catch (e) { report(`cmd ${m.ev}`, e); res = { error: String(e.message || e) }; } }
+    if (m.ackId != null) ack(pidOf(m.name), m.ackId, res ?? null);
   }
 };

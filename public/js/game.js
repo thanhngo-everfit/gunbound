@@ -30,6 +30,15 @@ const MIRROR = new Set(['canhcut-s2']);
 const UPRIGHT = new Set(['rong-s1', 'rong-ss', 'phuong-s2', 'phuong-ss', 'kimquy-s2', 'bocap-s1', 'bocap-ss', 'cu-ss', 'camap-s2', 'camap-ss', 'canhcut-s1', 'canhcut-s2']);
 
 const $ = id => document.getElementById(id);
+// errors go to the console and, a few per minute at most, to /api/log so they can be read back later
+let errSent = 0, errWindow = 0;
+export function reportError(where, e) {
+  console.error(where, e);
+  const now = Date.now();
+  if (now - errWindow > 60000) { errWindow = now; errSent = 0; }
+  if (++errSent > 3) return;
+  fetch('/api/log', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ where, message: String(e?.message || e), stack: String(e?.stack || '').slice(0, 1500), page: location.host }) }).catch(() => {});
+}
 
 export class Game {
   constructor({ socket, myPid, sfx, onSys, onExit, onQuit, getProfile }) {
@@ -101,12 +110,15 @@ export class Game {
     this.bindButtons();
     this.resize();
     this.loop = ts => {
+      // schedule the next frame first: one exception in update/render used to stop the loop for good, which
+      // froze the whole match ("đơ", the turn clock stopped)
+      this.raf = requestAnimationFrame(this.loop);
       const dt = Math.min(0.05, this.lastTs ? (ts - this.lastTs) / 1000 : 0.016);
       this.lastTs = ts;
       this.time += dt;
-      this.update(dt);
-      this.render();
-      this.raf = requestAnimationFrame(this.loop);
+      try { this.update(dt); } catch (e) { reportError('update', e); }
+      // a throw between save() and restore() would leave the context dirty: reset it for the next frame
+      try { this.render(); } catch (e) { reportError('render', e); try { this.ctx.reset?.(); } catch {} }
     };
   }
 

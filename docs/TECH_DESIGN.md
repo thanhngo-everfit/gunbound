@@ -41,8 +41,11 @@ docs/               this file and GAME_DESIGN.md
 User: "build server to deploy to vercel, not in my local", on free plans. Vercel functions can't keep a room in memory: native WebSockets are beta, each connection is its own instance, and they last at most 5 min (Hobby). So:
 - **The host's browser is the server.** `public/js/host-worker.js` runs the unchanged `server/room.js` in a Web Worker, so its timers keep full speed when the host's tab is in the background. Room no longer imports Node modules: stats come in through `hooks` (`profile`, `recordMatch`).
 - **Transport: Ably**, one channel `tc:room:<id>` per room plus `tc:lobby`.
-  - Guests publish `c` commands with an ack id.
-  - The worker batches every 50 ms, keeping only the last `game:pos`/`game:aim` per xe. The host page publishes one `b` message per batch, plus `a` acks.
+  - Guests publish `c` commands; only commands whose caller passes a callback carry an ack id (aim/move/fire don't).
+  - The worker batches every 66 ms, keeping only the last `game:pos`/`game:aim` per xe; acks for guests ride inside the batch. The host page publishes one numbered `b` message per batch (`seq`) without waiting for the previous publish (Ably keeps a connection's order; waiting built a backlog that made everyone lag), and an `h` beat with the last `seq` every 3 s.
+  - **Resync:** a guest that sees a `seq` jump, or a beat ahead of what it has, sends `sync` (at most every 4 s) and the worker answers with `sendGameTo` (a rejoin `game:start` with the full snapshot).
+  - **Watchdog** (worker, every 2 s): a turn 8 s past its clock is skipped, a replay that never hands over (45 s) moves to the next turn, and the event is reported.
+  - **Errors** are reported to `POST /api/log` (Redis list `errors`, last 200; `GET /api/log` returns the last 50). `game.js reportError` (≤ 3 a minute) is used by the game loop, the worker and failed publishes. The game loop schedules its next frame before update/render and catches their errors: one exception used to stop it for good (the frozen match and turn clock of 2026-10-01).
   - Payloads over 45 KB are deflated and split into `z` chunks; Ably's limit is 64 KB.
   - `echoMessages: false`.
   - Identity: the Ably clientId is the player's name, signed into the token by `/api/ably-token`. The host derives `pidOf(name)` (`shared/ids.js`) instead of trusting payloads, and guests accept events only from the host's clientId.
