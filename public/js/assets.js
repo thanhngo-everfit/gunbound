@@ -550,7 +550,7 @@ function paintTop(base, fit, n) {
   return out;
 }
 
-// The base pilot wearing the items in a look string ("f2.h3.g1"). The canvas is padded for hats and capes;
+// The base pilot wearing the items in a look string ("f2.c3.g1"). The canvas is padded for the cape;
 // baseW/baseH and padL/padT say where the pilot itself sits so riders stay the same size.
 const dressed = new Map();
 // ---------- hair colour: the pilot's own hair, found by colour and dyed like the tops ----------
@@ -695,7 +695,7 @@ export function pilotImage(look) {
   // its right clasp hangs on the far side of the collar, hidden behind the neck, so the cape comes out from under the
   // tee and flows back (user, 2026-10-01: the old flap at mid-back "không liền với áo")
   if (T?.cape && ASSETS.outfit.cape) {
-    const cape = ASSETS.outfit.cape, [ax, ay, rot, cwk] = fit.cape || [0.42, 0.5, 0.35, 0.62], w = W * cwk, h = (cape.height / cape.width) * w;
+    const cape = ASSETS.outfit.cape, [ax, ay, rot, cwk] = fit.cape || [0.44, 0.53, 0.22, 0.55], w = W * cwk, h = (cape.height / cape.width) * w;
     x.save(); x.translate(padL + ax * W, padT + ay * H); x.rotate(rot); x.drawImage(cape, -w * 0.9, -h * 0.06, w, h); x.restore();
   }
   x.drawImage(T ? paintTop(base, fit, L.s) : base, padL, padT);
@@ -865,4 +865,3 @@ async function loadAll() {
   ASSETS.ready = true;
   return ASSETS;
 }
-window.__capeTune = (id, v) => { PILOT_FIT[id].cape = v; dressed.clear(); }; // DEBUG

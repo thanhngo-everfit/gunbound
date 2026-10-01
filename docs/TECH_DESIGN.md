@@ -99,6 +99,7 @@ User: "cần google login, và chỉ login được với account @everfit.io �
   - Glasses are drawn in code (`outfit-art.js`) from `PILOT_FIT.head` (skull centre, brim y, half width, top) and `PILOT_FIT.eyes` (near eye, far eye, ear, lens radius).
     - `outfits.jpg` is now only used for the cape.
   - Tops come from `TOPS` and are painted into the tee: the mask is the light, unsaturated pixels inside the polygon, flood-filled from the tee's white so the grey shorts past the hem's ink line stay unpainted; colour, stripes, camo, flowers, metal, emblem and the cape (sheet row 3, col 2) are multiplied by the tee's brightness, so line art and cel shading survive.
+  - The cape hangs by its right clasp at the collar (`PILOT_FIT.cape` or the default `[0.44, 0.53, 0.22, 0.55]` = anchor x, y, rotation, width), drawn behind the pilot so it comes out from under the tee (the old mid-back flap looked detached).
   - `s8` is the classic set: the old `pilot.jpg` art (`ASSETS.pilotClassic`).
 - **Sizing:** dressed canvases are padded, with `baseW`/`baseH`/`padL`/`padT`, and `xeSprite` seats riders by the bare pilot so their size doesn't change. Caches key on the look string.
 - **Sessions:** a resumed session must not send the browser's look (it would overwrite the account's); only account creation and `player:gender` save it.
