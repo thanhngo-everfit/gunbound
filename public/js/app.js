@@ -115,6 +115,13 @@ function thumb(cv, img, fill = 0.86) {
   const k = Math.min((cv.width * fill) / img.width, (cv.height * fill) / img.height);
   drawSmooth(ctx, img, (cv.width - img.width * k) / 2, (cv.height - img.height * k) / 2, img.width * k, img.height * k);
 }
+function itemThumb(cv, img, headOnly) {
+  const ctx = cv.getContext('2d');
+  ctx.clearRect(0, 0, cv.width, cv.height);
+  if (!img) return;
+  const sh = headOnly ? img.height * 0.6 : img.height, k = Math.min((cv.width * 0.95) / img.width, (cv.height * 0.98) / sh);
+  ctx.drawImage(img, 0, 0, img.width, sh, (cv.width - img.width * k) / 2, cv.height - sh * k, img.width * k, sh * k);
+}
 function renderWardrobe() {
   const look = lookString(draft);
   // previews: the dressed pilot, and riding the xe picked in the room (or the dragon)
@@ -136,7 +143,8 @@ function renderWardrobe() {
   for (const b of $('wd-items').children) {
     const n = Number(b.dataset.n);
     // tops are painted into the tee, so their thumbnail is the pilot wearing them
-    if (n) thumb(b.querySelector('canvas'), wdTab === 's' ? pilotImage(`${draft.pilot}.s${n}`) : ASSETS.outfit[wdTab][n], wdTab === 's' ? 0.98 : 0.86);
+    // every thumbnail is the pilot wearing the item (hats and glasses zoomed on the head)
+    if (n) itemThumb(b.querySelector('canvas'), pilotImage(`${draft.pilot}.${wdTab}${n}`), wdTab !== 's');
     else { const c = b.querySelector('canvas').getContext('2d'); c.font = '34px sans-serif'; c.textAlign = 'center'; c.fillText('🚫', 44, 48); }
     b.onclick = () => {
       draft[wdTab] = n;

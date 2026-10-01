@@ -90,7 +90,9 @@ User: "cần google login, và chỉ login được với account @everfit.io �
 - **Look string:** the player's look travels in the old `gender` field: `"<pilot>[.h<n>][.g<n>][.s<n>]"`, e.g. `f2.h3.g1`.
   - `shared/outfits.js` parses and validates it (`cleanLook`, re-exported as `cleanGender` in `shared/ids.js`), so the server, the Vercel API and the host worker all accept and store it unchanged.
 - **Drawing:** `assets.js pilotImage(look)` dresses a plain base pilot (`pilot-base.jpg`, fixed boxes, enclosed key gaps at `holesMin` 75) with `PILOT_FIT` anchors measured per pilot: hat brim, eye line, tee polygon, chest and back.
-  - Hats and glasses come from `outfits.jpg` rows 1–2; the nón lá's ribbon is cropped.
+  - Hats and glasses are drawn in code (`outfit-art.js`) from `PILOT_FIT.head` (skull centre, brim y, half width, top) and `PILOT_FIT.eyes` (near eye, far eye, ear, lens radius).
+    - Hats have a `back` layer drawn before the pilot and a `front` layer after it, so bands and brims wrap the head; ink width is `W * 0.009`.
+    - `outfits.jpg` is now only used for the cape.
   - Tops come from `TOPS` and are painted into the tee: the mask is the light, unsaturated pixels inside the polygon; colour, stripes, camo, flowers, metal, emblem and the cape (sheet row 3, col 2) are multiplied by the tee's brightness, so line art and cel shading survive.
   - `s8` is the classic set: the old `pilot.jpg` art (`ASSETS.pilotClassic`).
 - **Sizing:** dressed canvases are padded, with `baseW`/`baseH`/`padL`/`padT`, and `xeSprite` seats riders by the bare pilot so their size doesn't change. Caches key on the look string.

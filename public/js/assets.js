@@ -2,6 +2,7 @@
 import { XE_LIST } from '/shared/xe.js';
 import { MAP_IDS, registerMask } from '/shared/physics.js';
 import { parseLook, ITEMS } from '/shared/outfits.js';
+import { drawHat, drawGlasses } from './outfit-art.js';
 
 const GREEN_BG = new Set(['bachtuoc', 'tethien', 'phuong']);
 const PILOT_GREEN = { m: false, f: true };
@@ -415,17 +416,16 @@ export function drawSmooth(ctx, img, x, y, w, h) {
 // Anchors are measured on the base pilots (fractions of the pilot image, facing right):
 //   hat: [centre x, brim y, width] · eyes: [centre x, y, glasses width] · tee: polygon around the shirt · chest: emblem spot
 const PILOT_FIT = {
-  m: { hat: [0.42, 0.24, 0.82], eyes: [0.54, 0.36, 0.42], chest: [0.42, 0.6], back: [0.27, 0.48],
+  // head: skull centre x, brim (hairline) y, half width, skull top · eyes: near eye, far eye, ear, lens radius
+  m: { head: [0.46, 0.235, 0.34, 0.05], eyes: [[0.45, 0.355], [0.625, 0.355], [0.2, 0.37], 0.075], chest: [0.42, 0.6], back: [0.27, 0.48],
     tee: [[0.22, 0.45], [0.5, 0.43], [0.68, 0.52], [0.64, 0.75], [0.22, 0.75]] },
-  f: { hat: [0.46, 0.24, 0.8], eyes: [0.56, 0.37, 0.42], chest: [0.44, 0.61], back: [0.28, 0.49],
+  f: { head: [0.48, 0.245, 0.33, 0.09], eyes: [[0.475, 0.37], [0.64, 0.37], [0.21, 0.37], 0.075], chest: [0.44, 0.61], back: [0.28, 0.49],
     tee: [[0.24, 0.46], [0.5, 0.45], [0.68, 0.53], [0.64, 0.75], [0.24, 0.75]] },
-  m2: { hat: [0.47, 0.25, 0.85], eyes: [0.57, 0.39, 0.42], chest: [0.47, 0.62], back: [0.34, 0.5],
+  m2: { head: [0.5, 0.26, 0.32, 0.08], eyes: [[0.485, 0.385], [0.66, 0.385], [0.27, 0.39], 0.072], chest: [0.47, 0.62], back: [0.34, 0.5],
     tee: [[0.31, 0.47], [0.55, 0.46], [0.7, 0.55], [0.66, 0.78], [0.31, 0.78]] },
-  f2: { hat: [0.52, 0.22, 0.7], eyes: [0.585, 0.36, 0.4], chest: [0.49, 0.64], back: [0.38, 0.52],
+  f2: { head: [0.53, 0.225, 0.3, 0.08], eyes: [[0.49, 0.35], [0.675, 0.35], [0.33, 0.37], 0.068], chest: [0.49, 0.64], back: [0.38, 0.52],
     tee: [[0.34, 0.49], [0.56, 0.48], [0.68, 0.56], [0.64, 0.78], [0.34, 0.78]] },
 };
-// the nón lá's chin ribbon is cut off (it crossed the face)
-const HAT_BASE_DEFAULT = 0.9, HAT_CROP = { 1: 0.6 };
 const OUTFIT_SHEET = { src: '/assets/sheets/outfits.jpg', green: true, cols: 5, rows: 3 };
 // tops: tee colour, an optional pattern and chest emblem, and the superhero's cape (a sprite from the sheet's 3rd row)
 const TOPS = {
@@ -438,18 +438,12 @@ const TOPS = {
   7: { base: '#ff7a1a', straps: '#f4f4f4' },
 };
 
+// only the superhero's cape comes from the item sheet now (row 3, column 2); hats and glasses are drawn in code
 async function loadOutfits() {
   const img = await loadImg(OUTFIT_SHEET.src);
   if (!img) return;
   const sheet = cutOut(img, OUTFIT_SHEET.green, false, true), cw = 1000 / OUTFIT_SHEET.cols, ch = 1000 / OUTFIT_SHEET.rows, m = 10;
-  const cell = (c, r) => cropBox(sheet, [c * cw + m, r * ch + m, (c + 1) * cw - m, (r + 1) * ch - m], [], [1000, 1000]);
-  for (const it of ITEMS.h) {
-    let im = cell(it.n - 1, 0);
-    if (HAT_CROP[it.n]) { const k = document.createElement('canvas'); k.width = im.width; k.height = Math.round(im.height * HAT_CROP[it.n]); k.getContext('2d').drawImage(im, 0, 0); im = k; }
-    ASSETS.outfit.h[it.n] = im;
-  }
-  for (const it of ITEMS.g) ASSETS.outfit.g[it.n] = cell(it.n - 1, 1);
-  ASSETS.outfit.cape = cell(1, 2);
+  ASSETS.outfit.cape = cropBox(sheet, [cw + m, 2 * ch + m, 2 * cw - m, 3 * ch - m], [], [1000, 1000]);
 }
 
 // the tee's pixels: light, unsaturated, inside the measured polygon (line art and skin stay out)
@@ -526,12 +520,17 @@ export function pilotImage(look) {
   c.width = W + padL + padR; c.height = H + padT;
   const x = c.getContext('2d');
   const at = (img, cx, cy, w, baseFrac = 0.5) => { const h = (img.height / img.width) * w; x.drawImage(img, padL + cx - w / 2, padT + cy - h * baseFrac, w, h); };
-  const T = L.s && TOPS[L.s], hat = L.h && ASSETS.outfit.h[L.h], glasses = L.g && ASSETS.outfit.g[L.g];
-  // the superhero's cape hangs behind the back
+  const T = L.s && TOPS[L.s];
+  // hats and glasses are drawn in code on the measured head (outfit-art.js), in the pilot's own ink width
+  const lw = W * 0.009, [hx, hy, hr, ht] = fit.head, [[nx, ny], [fx, fy], [ex, ey], lr] = fit.eyes;
+  const head = { cx: padL + hx * W, by: padT + hy * H, rx: hr * W, ry: hr * W * 0.3, top: padT + ht * H, lw };
+  const eyes = { nx: padL + nx * W, ny: padT + ny * H, fx: padL + fx * W, fy: padT + fy * H, ex: padL + ex * W, ey: padT + ey * H, r: lr * W, lw };
+  // behind the pilot: the superhero's cape and the far half of a hat's band or brim
   if (T?.cape && ASSETS.outfit.cape) { const w = W * 0.5; at(ASSETS.outfit.cape, fit.back[0] * W - w * 0.18, fit.back[1] * H - w * 0.05, w, 0); }
+  if (L.h) drawHat(x, L.h, head, 'back');
   x.drawImage(T ? paintTop(base, fit, L.s) : base, padL, padT);
-  if (glasses) at(glasses, fit.eyes[0] * W, fit.eyes[1] * H, fit.eyes[2] * W);
-  if (hat) at(hat, fit.hat[0] * W, fit.hat[1] * H, fit.hat[2] * W, HAT_BASE_DEFAULT);
+  if (L.g) drawGlasses(x, L.g, eyes);
+  if (L.h) drawHat(x, L.h, head, 'front');
   Object.assign(c, { baseW: W, baseH: H, padL, padT });
   dressed.set(look, c);
   return c;
