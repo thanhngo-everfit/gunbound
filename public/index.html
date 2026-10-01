@@ -15,18 +15,26 @@
     <div class="login-card">
       <div class="logo-row"><canvas id="logo-xe" width="300" height="240"></canvas><div class="logo">THÚ CHIẾN</div></div>
       <div class="tagline">Đại chiến pháo thú · 5 đấu 5</div>
-      <div class="gender-pick" id="login-gender">
-        <button type="button" data-g="m"><canvas width="64" height="64"></canvas>Nam</button>
-        <button type="button" data-g="f"><canvas width="64" height="64"></canvas>Nữ</button>
-        <button type="button" data-g="m2"><canvas width="64" height="64"></canvas>Nam</button>
-        <button type="button" data-g="f2"><canvas width="64" height="64"></canvas>Nữ</button>
+      <!-- step 1: Google sign-in (@everfit.io only) -->
+      <div id="login-google">
+        <div id="gbtn" class="gbtn"></div>
+        <div class="login-hint" id="login-google-hint">Đăng nhập bằng tài khoản Google @everfit.io</div>
       </div>
-      <form id="login-form">
-        <input id="login-name" maxlength="16" placeholder="Nhập tên của bạn" autocomplete="off" autofocus>
-        <input id="login-pin" maxlength="4" inputmode="numeric" placeholder="PIN 4 số" autocomplete="off" title="Lần đầu: tự đặt mã PIN để giữ tên. Lần sau: nhập đúng mã đó.">
-        <button class="btn gold big" type="submit">VÀO GAME</button>
+      <!-- step 2, first visit only: pick a pilot and a name for this Google account -->
+      <form id="login-form" class="hide">
+        <div class="login-step">Lần đầu vào game: chọn phi công và đặt tên của bạn</div>
+        <div class="gender-pick" id="login-gender">
+          <button type="button" data-g="m"><canvas width="64" height="64"></canvas>Nam</button>
+          <button type="button" data-g="f"><canvas width="64" height="64"></canvas>Nữ</button>
+          <button type="button" data-g="m2"><canvas width="64" height="64"></canvas>Nam</button>
+          <button type="button" data-g="f2"><canvas width="64" height="64"></canvas>Nữ</button>
+        </div>
+        <div class="login-row">
+          <input id="login-name" maxlength="16" placeholder="Nhập tên của bạn" autocomplete="off">
+          <button class="btn gold big" type="submit">VÀO GAME</button>
+        </div>
+        <div class="login-hint" id="login-email"></div>
       </form>
-      <div class="login-hint">Lần đầu vào: tự đặt mã PIN 4 số để giữ tên và thứ hạng của bạn.</div>
       <div id="login-error" class="error"></div>
     </div>
   </section>

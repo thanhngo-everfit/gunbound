@@ -53,15 +53,19 @@ export class AblySocket {
       case 'room:create': return ack(await this.createRoom(data));
       case 'room:join': return ack(await this.joinRoom(String(data.id)));
       case 'room:leave': return this.leaveRoom();
+      case 'player:gender':
+        // remember the pilot on the account, then tell the room
+        if (this.me) { this.me.gender = data.gender; api('/api/login', { token: this.me.token, gender: data.gender }).catch(() => {}); }
+        return this.room ? this.command(ev, data, ack) : undefined;
       default: return this.command(ev, data, ack);
     }
   }
 
   // ---------- session ----------
 
-  async hello({ name, pin, token, gender }) {
-    const res = await api('/api/login', { name, pin, token, gender });
-    if (res.error) return res;
+  async hello(data) {
+    const res = await api('/api/login', data);
+    if (res.error || !res.token) return res; // includes { needName } for a brand-new Google account
     this.me = res;
     if (!this.ably) await this.connectAbly();
     // after a reload, slip back into the room we were in (a room we hosted died with the old page)

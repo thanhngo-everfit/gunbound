@@ -11,6 +11,7 @@ process.env.KV_REST_API_URL = `http://localhost:${PORT}/__redis`;
 process.env.KV_REST_API_TOKEN = 'dev';
 process.env.ABLY_API_KEY ||= 'devapp.devkey:devsecret';
 process.env.FAKE_ABLY = '1';
+process.env.FAKE_GOOGLE = '1';
 
 const app = express();
 app.use(express.json({ limit: '1mb' }));

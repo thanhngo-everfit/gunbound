@@ -2,7 +2,7 @@ import express from 'express';
 import http from 'node:http';
 import path from 'node:path';
 import os from 'node:os';
-import { randomUUID, createHash } from 'node:crypto';
+import { randomUUID } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { Server } from 'socket.io';
 import fs from 'node:fs';
@@ -10,6 +10,7 @@ import zlib from 'node:zlib';
 import { Room } from './room.js';
 import { registerMask, MAP_IDS } from '../shared/physics.js';
 import { leaderboard, profile, recordMatch } from './stats.js';
+import { verifyGoogle, GOOGLE_CLIENT_ID, ALLOWED_DOMAIN } from '../api/_lib/google.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PORT = Number(process.env.PORT) || 3000;
@@ -25,7 +26,7 @@ const app = express();
 app.use(express.static(path.join(ROOT, 'public')));
 app.use('/shared', express.static(path.join(ROOT, 'shared')));
 // the client asks which transport to use: Socket.IO here, Ably + functions on Vercel (api/config.js)
-app.get('/api/config', (req, res) => res.json({ mode: 'socket' }));
+app.get('/api/config', (req, res) => res.json({ mode: 'socket', googleClientId: GOOGLE_CLIENT_ID, domain: ALLOWED_DOMAIN }));
 const server = http.createServer(app);
 const io = new Server(server);
 
@@ -36,22 +37,34 @@ let nextPid = 1;
 
 const lobbyList = () => [...rooms.values()].map(r => r.info());
 
-// Name + 4-digit PIN "accounts": the first login claims a name, later logins must match the PIN.
-// Stored hashed in data/accounts.json. Not real security, just stops casual rank spoofing.
+// Google accounts (@everfit.io only): one Google account = one game name + pilot, kept in data/accounts.json
+// as { users: { [googleSub]: { name, gender, email } }, names: { [lowercase name]: googleSub }, sessions: { [token]: sub } }.
 const ACCOUNTS_FILE = path.join(ROOT, 'data', 'accounts.json');
 let accounts = {};
 try { accounts = JSON.parse(fs.readFileSync(ACCOUNTS_FILE, 'utf8')); } catch { accounts = {}; }
-const pinHash = (name, pin) => createHash('sha256').update(`thu-chien:${name.toLowerCase()}:${pin}`).digest('hex');
-function checkAccount(name, pin) {
-  if (!/^\d{4}$/.test(String(pin || ''))) return 'Mã PIN gồm 4 chữ số';
-  const key = name.toLowerCase();
-  if (!accounts[key]) {
-    accounts[key] = pinHash(name, pin);
-    fs.mkdirSync(path.dirname(ACCOUNTS_FILE), { recursive: true });
-    fs.writeFile(ACCOUNTS_FILE, JSON.stringify(accounts), () => {});
-    return null;
+if (!accounts.users) accounts = { users: {}, names: {}, sessions: {} }; // the old name+PIN file is dropped
+const saveAccounts = () => { fs.mkdirSync(path.dirname(ACCOUNTS_FILE), { recursive: true }); fs.writeFile(ACCOUNTS_FILE, JSON.stringify(accounts), () => {}); };
+// → { user } | { needName, suggest } | { error }
+async function googleLogin({ token, credential, name, gender }) {
+  if (token && !credential) {
+    const user = accounts.users[accounts.sessions[token]];
+    return user ? { user, token } : { error: 'Phiên đăng nhập đã hết, hãy đăng nhập lại', expired: true };
   }
-  return accounts[key] === pinHash(name, pin) ? null : 'Tên này đã có người dùng, sai mã PIN';
+  let g;
+  try { g = await verifyGoogle(credential); } catch (e) { return { error: e.message }; }
+  let user = accounts.users[g.sub];
+  if (!user) {
+    name = cleanName(name);
+    if (!name) return { needName: true, suggest: cleanName(g.given), email: g.email };
+    const owner = accounts.names[name.toLowerCase()];
+    if (owner && owner !== g.sub) return { error: 'Tên này đã có người dùng, hãy chọn tên khác', needName: true, suggest: name };
+    user = accounts.users[g.sub] = { name, gender: cleanGender(gender), email: g.email };
+    accounts.names[name.toLowerCase()] = g.sub;
+  }
+  const t = randomUUID();
+  accounts.sessions[t] = g.sub;
+  saveAccounts();
+  return { user, token: t };
 }
 const lobbyState = () => ({ rooms: lobbyList(), online: [...players.values()].filter(p => p.socket).length, leaderboard: leaderboard(10) });
 const broadcastLobby = () => io.to('lobby').emit('lobby', lobbyState());
@@ -72,26 +85,22 @@ io.on('connection', socket => {
   const ok = fn => (...args) => { if (me) fn(...args); };
   const room = () => (me && rooms.get(me.roomId)) || null;
 
-  socket.on('hello', ({ name, token, gender, pin } = {}, ack = () => {}) => {
-    name = cleanName(name);
-    if (!name) return ack({ error: 'Vui lòng nhập tên' });
-    me = token && players.get(token);
-    // reconnecting with a live session token skips the PIN; a fresh login needs it
-    if (!me) {
-      const err = checkAccount(name, pin);
-      if (err) return ack({ error: err });
-    }
+  socket.on('hello', async (data = {}, ack = () => {}) => {
+    const login = await googleLogin(data);
+    if (!login.user) return ack(login);
+    const { user } = login;
+    // one live player per account: a second tab takes the session over
+    me = [...players.values()].find(p => p.name === user.name) || null;
     if (me) {
       clearTimeout(me.graceTimer);
       if (me.socket && me.socket !== socket) me.socket.disconnect(true);
       me.socket = socket;
-      if (!me.roomId) me.name = name;
-      me.gender = cleanGender(gender ?? me.gender);
+      me.gender = cleanGender(user.gender);
     } else {
-      me = { token: randomUUID(), pid: 'u' + nextPid++, name, gender: cleanGender(gender), socket, roomId: null };
+      me = { token: randomUUID(), pid: 'u' + nextPid++, name: user.name, gender: cleanGender(user.gender), socket, roomId: null };
       players.set(me.token, me);
     }
-    ack({ token: me.token, pid: me.pid, name: me.name, gender: me.gender, roomId: me.roomId });
+    ack({ token: login.token, pid: me.pid, name: me.name, gender: me.gender, roomId: me.roomId });
     const r = room();
     if (r) r.onReconnect(me);
     else socket.join('lobby');
@@ -127,6 +136,8 @@ io.on('connection', socket => {
 
   socket.on('player:gender', ok(({ gender } = {}) => {
     me.gender = cleanGender(gender);
+    const sub = accounts.names[me.name.toLowerCase()];
+    if (accounts.users[sub]) { accounts.users[sub].gender = me.gender; saveAccounts(); }
     room()?.sync();
   }));
   socket.on('room:addBot', ok(({ team } = {}) => room()?.addBot(me, team)));

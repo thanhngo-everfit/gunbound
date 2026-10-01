@@ -10,8 +10,8 @@ import { createSocket } from './net.js';
 const $ = id => document.getElementById(id);
 const socket = await createSocket();
 const sfx = new Sfx();
-// Name is remembered per browser; the reconnect token is per tab so two tabs are two players.
-const storage = k => (k === 'tc-token' ? sessionStorage : localStorage);
+// The Google session is remembered per browser: one account is one player, so returning players skip the login.
+const storage = () => localStorage;
 const store = {
   get: k => { try { return storage(k).getItem(k); } catch { return null; } },
   set: (k, v) => { try { storage(k).setItem(k, v); } catch {} },
@@ -93,27 +93,54 @@ for (const b of document.querySelectorAll('.gender-pick [data-g]')) {
     drawPortrait($('logo-xe'), 'rong', 'A', 40, undefined, gender);
     renderMe();
     if (me) { socket.emit('player:gender', { gender }); buildXeGrid(); renderRoom(); }
+    // the server keeps the pilot on the account, so it sticks on the next visit
   };
 }
 renderGender();
 
 // ---------- login ----------
+// Google sign-in, @everfit.io only (the server checks the token). One Google account = one game account:
+// the first visit picks a name and a pilot; after that a remembered session goes straight to the lobby.
 
-$('login-name').value = store.get('tc-name') || '';
-$('login-pin').value = store.get('tc-pin') || '';
+let pendingCredential = null;
 $('login-form').onsubmit = e => {
   e.preventDefault();
   sfx.ensure();
-  hello($('login-name').value, $('login-pin').value.trim());
+  if (pendingCredential) hello({ credential: pendingCredential, name: $('login-name').value });
 };
 
-function hello(name, pin = store.get('tc-pin')) {
-  socket.emit('hello', { name, pin, gender, token: store.get('tc-token') }, res => {
-    if (res.error) { $('login-error').textContent = res.error; show('screen-login'); return; }
+function loginError(msg) { $('login-error').textContent = msg || ''; }
+function showLoginStep(step) {
+  $('login-google').classList.toggle('hide', step !== 'google');
+  $('login-form').classList.toggle('hide', step !== 'name');
+  show('screen-login');
+}
+
+function hello(data) {
+  socket.emit('hello', { ...data, gender }, res => {
+    if (res.needName) {
+      // a new Google account: choose a name (and pilot) once
+      showLoginStep('name');
+      $('login-name').value = res.suggest || '';
+      $('login-email').textContent = res.email ? `Tài khoản: ${res.email}` : '';
+      loginError(res.error);
+      $('login-name').focus();
+      return;
+    }
+    if (res.error) {
+      if (res.expired || data.token) store.set('tc-token', '');
+      loginError(data.token ? '' : res.error);
+      showLoginStep('google');
+      startGoogle();
+      return;
+    }
     me = res;
+    pendingCredential = null;
+    loginError('');
     store.set('tc-token', res.token);
-    store.set('tc-name', res.name);
-    if (pin) store.set('tc-pin', pin);
+    gender = PILOTS.includes(res.gender) ? res.gender : gender;
+    store.set('tc-gender', gender);
+    renderGender();
     $('lobby-me').textContent = '👤 ' + res.name;
     renderMe();
     socket.emit('lobby:get');
@@ -121,10 +148,32 @@ function hello(name, pin = store.get('tc-pin')) {
   });
 }
 
+// Google Identity Services button (client id from /api/config)
+let googleReady = false;
+async function startGoogle() {
+  if (googleReady) return;
+  googleReady = true;
+  const cfg = await fetch('/api/config', { cache: 'no-store' }).then(r => r.json()).catch(() => ({}));
+  const onCredential = c => { pendingCredential = c.credential; sfx.ensure(); hello({ credential: c.credential }); };
+  if (cfg.fakeGoogle) {
+    // offline test stand-in (tools/dev-vercel.mjs): type an email instead of a Google popup
+    $('gbtn').innerHTML = '<input id="fake-email" placeholder="test@everfit.io"><button class="btn gold" id="fake-go" type="button">Đăng nhập (giả lập)</button>';
+    $('fake-go').onclick = () => { const em = $('fake-email').value.trim(); onCredential({ credential: `fake:${em}:${em.toLowerCase()}` }); };
+    return;
+  }
+  await new Promise((ok, fail) => { const s = document.createElement('script'); s.src = 'https://accounts.google.com/gsi/client'; s.onload = ok; s.onerror = fail; document.head.appendChild(s); })
+    .catch(() => loginError('Không tải được Google Sign-In, hãy kiểm tra mạng'));
+  if (!window.google?.accounts?.id) return;
+  google.accounts.id.initialize({ client_id: cfg.googleClientId, callback: onCredential, hd: cfg.domain || 'everfit.io', auto_select: true });
+  google.accounts.id.renderButton($('gbtn'), { theme: 'filled_blue', size: 'large', width: 300, text: 'signin_with', shape: 'pill' });
+  google.accounts.id.prompt();
+}
+
 socket.on('connect', () => {
-  // Auto-reconnect after a network drop or page reload.
-  const name = store.get('tc-name');
-  if (me || (name && store.get('tc-token'))) hello(me ? me.name : name);
+  // a remembered session skips the login screen; reconnects after a network drop resume it too
+  const token = me?.token || store.get('tc-token');
+  if (token) hello({ token });
+  else { showLoginStep('google'); startGoogle(); }
 });
 
 // ---------- lobby ----------

@@ -65,6 +65,24 @@ User: "build server to deploy to vercel, not in my local", on free plans. Vercel
   - a guest reloading and rejoining; the host reloading, which closes the room for the guest;
   - match recording (non-host refused, duplicates ignored).
 
+## 2c. Login: Google, @everfit.io only (2026-10-01)
+
+User: "cần google login, và chỉ login được với account @everfit.io … mỗi account google chỉ link 1 1 tài khoản, ko cần pin, cần nhập tên là được; sau khi có tài khoản rồi thì không show màn hình chọn nhân vật và nhập tên nữa".
+- **Client** (`app.js`): Google Identity Services button with `hd: everfit.io` and `auto_select`. The client id comes from `/api/config` and is the Roadmap dashboard project's OAuth client.
+  - First visit: the server answers `needName`, and the login card switches to "choose a pilot and a name" (the name is prefilled from the Google given name).
+  - After that, the session token in localStorage logs straight into the lobby.
+  - Pilot changes in the room are saved on the account.
+- **Server check:** `api/_lib/google.js` (`google-auth-library` `verifyIdToken`) checks audience, `email_verified` and the `@everfit.io` suffix. It is shared by the Vercel `api/login.js` and the Node `server/index.js`.
+- **Storage:**
+  - Redis: `guser:<googleSub>` → `{ name, gender, email }`, `gname:<lowercase name>` → sub (unique names), `sess:<token>` → name (60 days).
+  - Node: `data/accounts.json` `{ users, names, sessions }`. The old name+PIN file is dropped; stats are still keyed by name.
+- **Offline test:** `tools/dev-vercel.mjs` sets `FAKE_GOOGLE=1`, which accepts `fake:<email>:<sub>` credentials and swaps the button for an email box. Verified:
+  - a non-everfit email is refused;
+  - a new account gets the name step, then the lobby;
+  - a reload goes straight to the lobby;
+  - a cleared browser with the same Google account goes straight to the lobby with the saved pilot;
+  - a taken name is refused.
+
 ## 3. Match flow
 
 1. `room:start` → server builds the mask (painted, possibly mirrored) and the spawns, and emits `game:start` (snapshot, `phase:'loading'`).

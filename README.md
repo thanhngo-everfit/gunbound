@@ -23,9 +23,14 @@ One-time setup (both services have a free plan that covers an office):
    `thuchien:`, change it with `REDIS_PREFIX`). It adds `KV_REST_API_URL` and `KV_REST_API_TOKEN`.
 2. **Ably:** sign up at ably.com (free plan), create an app, and copy its **root API key**. In Vercel project Settings →
    Environment Variables, add `ABLY_API_KEY` with that key.
-3. **Deployment Protection:** turn off Vercel Authentication (Settings → Deployment Protection) so coworkers without a
+3. **Google login:** sign-in is Google only, restricted to **@everfit.io**. It reuses the OAuth client of the Roadmap
+   dashboard (`292601272916-…apps.googleusercontent.com`, override with `GOOGLE_CLIENT_ID`). In Google Cloud Console →
+   APIs & Services → Credentials → that OAuth client → **Authorized JavaScript origins**, add the game's production
+   URL (e.g. `https://gunbound-xxx.vercel.app`) and `http://localhost:3000`. Origins are exact: no wildcards, so use
+   the stable production domain rather than per-deployment preview URLs.
+4. **Deployment Protection:** turn off Vercel Authentication (Settings → Deployment Protection) so coworkers without a
    Vercel login can open the game.
-4. Redeploy. `https://<your-app>/api/config` should show `"ok": true`.
+5. Redeploy. `https://<your-app>/api/config` should show `"ok": true`.
 
 `vercel.json` builds with `node tools/build-vercel.mjs` (public/ + shared/ + server/room.js and bot.js into `dist/`).
 To try the Vercel path offline: `node tools/build-vercel.mjs && node tools/dev-vercel.mjs`, then open
