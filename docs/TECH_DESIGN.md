@@ -67,6 +67,8 @@ User: "build server to deploy to vercel, not in my local", on free plans. Vercel
 
 ## 2c. Login: Google (2026-10-01)
 
+**Local play has no Google login** (2026-10-01, user: "gỡ google login trên bản local"): `npm run dev` serves `/api/config` with `localLogin: true`, the login card shows only the pilot + name form, and `hello { local, name }` logs in by name (`server/index.js localLogin`; the name is the account, an existing account with that name is reused, a session token is remembered as before). `GOOGLE_LOGIN=1 npm run dev` brings Google back. The Vercel build is unchanged (Google only).
+
 Update 2026-10-01: any Google account may play (user: "tài khoản google nào cũng đc"). The domain check stays behind `ALLOWED_DOMAIN`, which is empty by default; when it is empty there is no `hd` hint and no domain line on the login card.
 
 User: "cần google login, và chỉ login được với account @everfit.io … mỗi account google chỉ link 1 1 tài khoản, ko cần pin, cần nhập tên là được; sau khi có tài khoản rồi thì không show màn hình chọn nhân vật và nhập tên nữa".

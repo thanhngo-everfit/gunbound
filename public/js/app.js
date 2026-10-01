@@ -168,11 +168,23 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') closeWardrob
 // the first visit picks a name and a pilot; after that a remembered session goes straight to the lobby.
 
 let pendingCredential = null;
+// local play (npm run dev) has no Google sign-in: the name alone is the account
+const config = fetch('/api/config', { cache: 'no-store' }).then(r => r.json()).catch(() => ({}));
+let localLogin = false;
 $('login-form').onsubmit = e => {
   e.preventDefault();
   sfx.ensure();
-  if (pendingCredential) hello({ credential: pendingCredential, name: $('login-name').value });
+  if (localLogin) hello({ local: true, name: $('login-name').value });
+  else if (pendingCredential) hello({ credential: pendingCredential, name: $('login-name').value });
 };
+// first screen when there is no remembered session
+async function startLogin() {
+  localLogin = !!(await config).localLogin;
+  if (!localLogin) { showLoginStep('google'); startGoogle(); return; }
+  $('login-form').querySelector('.login-step').textContent = 'Chọn phi công và nhập tên (nhập lại đúng tên cũ để vào tài khoản cũ)';
+  showLoginStep('name');
+  $('login-name').focus();
+}
 
 function loginError(msg) { $('login-error').textContent = msg || ''; }
 function showLoginStep(step) {
@@ -196,8 +208,7 @@ function hello(data) {
     if (res.error) {
       if (res.expired || data.token) store.set('tc-token', '');
       loginError(data.token ? '' : res.error);
-      showLoginStep('google');
-      startGoogle();
+      startLogin();
       return;
     }
     me = res;
@@ -219,7 +230,7 @@ let googleReady = false;
 async function startGoogle() {
   if (googleReady) return;
   googleReady = true;
-  const cfg = await fetch('/api/config', { cache: 'no-store' }).then(r => r.json()).catch(() => ({}));
+  const cfg = await config;
   const onCredential = c => { pendingCredential = c.credential; sfx.ensure(); hello({ credential: c.credential }); };
   if (cfg.fakeGoogle) {
     // offline test stand-in (tools/dev-vercel.mjs): type an email instead of a Google popup
@@ -254,7 +265,7 @@ socket.on('connect', () => {
   // a remembered session skips the login screen; reconnects after a network drop resume it too
   const token = me?.token || store.get('tc-token');
   if (token) hello({ token });
-  else { showLoginStep('google'); startGoogle(); }
+  else startLogin();
 });
 
 // ---------- lobby ----------

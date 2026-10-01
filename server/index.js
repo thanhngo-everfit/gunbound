@@ -26,7 +26,10 @@ const app = express();
 app.use(express.static(path.join(ROOT, 'public')));
 app.use('/shared', express.static(path.join(ROOT, 'shared')));
 // the client asks which transport to use: Socket.IO here, Ably + functions on Vercel (api/config.js)
-app.get('/api/config', (req, res) => res.json({ mode: 'socket', googleClientId: GOOGLE_CLIENT_ID, domain: ALLOWED_DOMAIN }));
+// Local play (npm run dev) logs in by name only, no Google (user, 2026-10-01: "gỡ google login trên bản local");
+// GOOGLE_LOGIN=1 turns the Google sign-in back on. The Vercel build always uses Google (api/login.js).
+const LOCAL_LOGIN = process.env.GOOGLE_LOGIN !== '1';
+app.get('/api/config', (req, res) => res.json({ mode: 'socket', localLogin: LOCAL_LOGIN, googleClientId: GOOGLE_CLIENT_ID, domain: ALLOWED_DOMAIN }));
 const server = http.createServer(app);
 const io = new Server(server);
 
@@ -45,7 +48,8 @@ try { accounts = JSON.parse(fs.readFileSync(ACCOUNTS_FILE, 'utf8')); } catch { a
 if (!accounts.users) accounts = { users: {}, names: {}, sessions: {} }; // the old name+PIN file is dropped
 const saveAccounts = () => { fs.mkdirSync(path.dirname(ACCOUNTS_FILE), { recursive: true }); fs.writeFile(ACCOUNTS_FILE, JSON.stringify(accounts), () => {}); };
 // → { user } | { needName, suggest } | { error }
-async function googleLogin({ token, credential, name, gender }) {
+async function googleLogin({ token, credential, name, gender, local }) {
+  if (local && LOCAL_LOGIN) return localLogin(name, gender);
   if (token && !credential) {
     const user = accounts.users[accounts.sessions[token]];
     return user ? { user, token } : { error: 'Phiên đăng nhập đã hết, hãy đăng nhập lại', expired: true };
@@ -63,6 +67,21 @@ async function googleLogin({ token, credential, name, gender }) {
   }
   const t = randomUUID();
   accounts.sessions[t] = g.sub;
+  saveAccounts();
+  return { user, token: t };
+}
+// name-only login for local play: the name is the account (an existing account with that name, Google or not, is reused)
+function localLogin(name, gender) {
+  name = cleanName(name);
+  if (!name) return { needName: true, error: 'Hãy nhập tên của bạn' };
+  const sub = accounts.names[name.toLowerCase()] || 'local:' + name.toLowerCase();
+  let user = accounts.users[sub];
+  if (!user) {
+    user = accounts.users[sub] = { name, gender: cleanGender(gender) };
+    accounts.names[name.toLowerCase()] = sub;
+  }
+  const t = randomUUID();
+  accounts.sessions[t] = sub;
   saveAccounts();
   return { user, token: t };
 }
