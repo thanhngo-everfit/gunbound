@@ -141,6 +141,7 @@ export class Game {
     await loadAssets();
     this.drawLoadCards();
     await report(35);
+    this.seed = snap.seed;
     this.mask = genTerrain(snap.seed, snap.map, snap.mirror);
     this.waterY = snap.waterY || WATER_Y;
     this.practice = !!snap.practice;
@@ -171,6 +172,8 @@ export class Game {
     this.charging = false;
     this.fired = false;
     this.lastPower = undefined; // one marker for every shot: they all fly the same curve
+    this.lastAngle = undefined;
+    this.ghost = null;
     this.powerMark = undefined; // a mark the player clicks onto the power bar to aim the next shot by
     this.angle = this.me ? this.me.angle : 45;
     $('result').classList.remove('show');

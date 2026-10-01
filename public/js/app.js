@@ -221,7 +221,8 @@ function hello(data) {
     $('lobby-me').textContent = '👤 ' + res.name;
     renderMe();
     socket.emit('lobby:get');
-    if (!res.roomId) show('screen-lobby');
+    // back without a room (e.g. the local server restarted): drop the match that was on screen
+    if (!res.roomId) { room = null; endGame(); show('screen-lobby'); }
   });
 }
 
@@ -586,6 +587,10 @@ for (const form of document.querySelectorAll('.chat-form')) {
 
 socket.on('game:start', snap => {
   if (!me) return;
+  // a new match always gets a fresh Game: an old one left over (e.g. the local server restarted mid-match, so
+  // nothing closed it) used to carry the last shot's ghost line, "Lần trước" angle and effects into the next
+  // practice. Only a rejoin of the same match (same seed) keeps the running Game.
+  if (game && !(snap.rejoin && game.seed === snap.seed)) endGame();
   if (!game) {
     game = new Game({ socket, myPid: me.pid, sfx, onSys: addSys, onQuit: leaveRoom, getProfile: pid => room?.members.find(m => m.id === pid)?.profile || null, onExit: () => { endGame(); show('screen-room'); renderRoom(); } });
     if (!snap.rejoin) addSys('Trận đấu bắt đầu! Chúc may mắn!');
