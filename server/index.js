@@ -9,7 +9,7 @@ import fs from 'node:fs';
 import zlib from 'node:zlib';
 import { Room } from './room.js';
 import { registerMask, MAP_IDS } from '../shared/physics.js';
-import { leaderboard, profile } from './stats.js';
+import { leaderboard, profile, recordMatch } from './stats.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PORT = Number(process.env.PORT) || 3000;
@@ -24,6 +24,8 @@ for (const id of MAP_IDS) {
 const app = express();
 app.use(express.static(path.join(ROOT, 'public')));
 app.use('/shared', express.static(path.join(ROOT, 'shared')));
+// the client asks which transport to use: Socket.IO here, Ably + functions on Vercel (api/config.js)
+app.get('/api/config', (req, res) => res.json({ mode: 'socket' }));
 const server = http.createServer(app);
 const io = new Server(server);
 
@@ -102,7 +104,7 @@ io.on('connection', socket => {
   socket.on('room:create', ok(({ name, practice } = {}, ack = () => {}) => {
     if (me.roomId) leaveRoom(me);
     const id = String(nextRoomId++);
-    const r = new Room(id, cleanName(name) || (practice ? `Luyện tập - ${me.name}` : `Phòng của ${me.name}`), io, broadcastLobby, !!practice);
+    const r = new Room(id, cleanName(name) || (practice ? `Luyện tập - ${me.name}` : `Phòng của ${me.name}`), io, broadcastLobby, !!practice, { profile, recordMatch });
     rooms.set(id, r);
     socket.leave('lobby');
     ack(r.join(me));

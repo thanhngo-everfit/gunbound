@@ -36,6 +36,35 @@ docs/               this file and GAME_DESIGN.md
 - Terrain stays in sync because **every carve is an explicit event**, which the client applies to its own mask and to the painted canvas.
 - **Replay speed:** clients play at `REPLAY_SPEED` (0.62), driven by **wall-clock time** (`anim.t0`), so slow or throttled browsers stay in step. The server waits `replayMs(frames, ss) + 1600 ms` before the next turn. An SS adds `SS_DELAY_FRAMES` for the cut-in.
 
+## 2b. Vercel edition (2026-10-01)
+
+User: "build server to deploy to vercel, not in my local", on free plans. Vercel functions can't keep a room in memory: native WebSockets are beta, each connection is its own instance, and they last at most 5 min (Hobby). So:
+- **The host's browser is the server.** `public/js/host-worker.js` runs the unchanged `server/room.js` in a Web Worker, so its timers keep full speed when the host's tab is in the background. Room no longer imports Node modules: stats come in through `hooks` (`profile`, `recordMatch`).
+- **Transport: Ably**, one channel `tc:room:<id>` per room plus `tc:lobby`.
+  - Guests publish `c` commands with an ack id.
+  - The worker batches every 50 ms, keeping only the last `game:pos`/`game:aim` per xe. The host page publishes one `b` message per batch, plus `a` acks.
+  - Payloads over 45 KB are deflated and split into `z` chunks; Ably's limit is 64 KB.
+  - `echoMessages: false`.
+  - Identity: the Ably clientId is the player's name, signed into the token by `/api/ably-token`. The host derives `pidOf(name)` (`shared/ids.js`) instead of trusting payloads, and guests accept events only from the host's clientId.
+- **Functions** (`api/`, Upstash Redis over REST in `api/_lib/redis.js`):
+  - `login`: name + PIN, 30-day session tokens.
+  - `ably-token`.
+  - `rooms`: the registry hash `rooms`, kept fresh by a 20 s host heartbeat; rooms are stale after 75 s.
+  - `lobby`: rooms, Ably presence count, leaderboard and the player's profile.
+  - `profiles`.
+  - `match`: only the registered host can report, and each match id counts once.
+  - Shared maths: `shared/stats-core.js` (also used by the Node `server/stats.js`).
+- **Client:** `public/js/net.js` asks `/api/config`. The Node server answers `socket` and the page loads Socket.IO as before. Vercel answers `ably` and the page uses `AblySocket` (`net-ably.js`), which has the Socket.IO client surface (`on`/`off`/`emit` with ack), so `app.js`/`game.js` are unchanged.
+  - A guest's room is remembered in sessionStorage and rejoined after a reload.
+  - When the host leaves, the room closes: a `closed` message, or presence leave for 12 s, makes guests see `room:closed`.
+- **Build:** `vercel.json` → `node tools/build-vercel.mjs` copies public/, shared/, server/room.js and bot.js into `dist/`.
+- **Offline test:** `tools/dev-vercel.mjs` runs the real `api/*.js` against an in-memory Upstash-compatible Redis on :3100, and `tools/fake-ably.js` links browser tabs through a BroadcastChannel. Verified with two tabs:
+  - login and wrong-PIN rejection;
+  - create, list and join a room; ready and start;
+  - turns, movement and fire across tabs; a 116 KB chunked message;
+  - a guest reloading and rejoining; the host reloading, which closes the room for the guest;
+  - match recording (non-host refused, duplicates ignored).
+
 ## 3. Match flow
 
 1. `room:start` → server builds the mask (painted, possibly mirrored) and the spawns, and emits `game:start` (snapshot, `phase:'loading'`).

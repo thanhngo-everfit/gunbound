@@ -1,7 +1,6 @@
 import { XE, XE_LIST, PICKABLE, LEGENDARY, LEGEND_CHANCE, LEGEND_CHANCE_ROOM, moveBudget, SS_COOLDOWN, SUDDEN_TYPES, DRAIN_STEP, SCORE_RESPAWN_TURNS, ITEMS, START_GOLD, TELE_SHOT } from '../shared/xe.js';
 import { planShot, BOT_NAMES } from './bot.js';
 import { genTerrain, spawnPositions, standSpot, settle, moveStep, crawlPath, swimAshore, TANK_R, simulateShot, mulberry32, replayMs, rollWind, driftWind, newWeather, advanceWeather, hasPainted, MAPS, MAP_IDS, W, WATER_Y } from '../shared/physics.js';
-import { recordMatch, profile } from './stats.js';
 
 const TURN_SECS = [15, 20, 30];
 const SUDDEN_OPTIONS = [0, 20, 30, 40];
@@ -14,8 +13,11 @@ const TICK_MS = 33;
 const LOAD_MAX_MS = 20000;
 
 export class Room {
-  constructor(id, name, io, onChange, practice = false) {
+  // hooks: where career stats live (the Node server's data/stats.json, or Redis behind the Vercel functions).
+  // The room only reads profiles and reports finished matches, so it runs the same in Node and in a browser worker.
+  constructor(id, name, io, onChange, practice = false, hooks = {}) {
     this.id = id;
+    this.hooks = { profile: () => null, recordMatch: () => {}, ...hooks };
     this.name = name;
     // practice rooms: solo training against dummy targets, no win/loss, no stats
     this.practice = practice;
@@ -52,7 +54,7 @@ export class Room {
       members: [...this.members.values()].map(m => ({
         id: m.player.pid, name: m.player.name, gender: m.player.gender, team: m.team, xe: m.xe, ready: m.ready,
         host: m.player.token === this.hostToken, online: m.player.bot || !!m.player.socket, bot: !!m.player.bot,
-        profile: m.player.bot ? null : profile(m.player.name),
+        profile: m.player.bot ? null : this.hooks.profile(m.player.name),
       })),
     };
   }
@@ -757,7 +759,7 @@ export class Room {
     // rank-ups for the results screen (compare the ladder before and after this match)
     const counted = winner && !this.practice;
     const before = counted ? new Map(players.filter(p => !p.bot).map(p => [p.id, profile(p.name)])) : null;
-    if (counted) recordMatch(players, winner);
+    if (counted) this.hooks.recordMatch(players, winner);
     if (counted) for (const p of players) {
       const b = before.get(p.id);
       if (!b) continue;

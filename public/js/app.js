@@ -5,9 +5,10 @@ import { Sfx } from './fx.js';
 import { Game, esc, shotDmgText } from './game.js';
 import { loadAssets, ASSETS, xeSprite, drawSmooth, iconUrl, rankIcon } from './assets.js';
 import { RANK_LIST, DRAGON_MIN_GAMES } from '/shared/ranks.js';
+import { createSocket } from './net.js';
 
 const $ = id => document.getElementById(id);
-const socket = io();
+const socket = await createSocket();
 const sfx = new Sfx();
 // Name is remembered per browser; the reconnect token is per tab so two tabs are two players.
 const storage = k => (k === 'tc-token' ? sessionStorage : localStorage);
@@ -204,6 +205,13 @@ function leaveRoom() {
   socket.emit('lobby:get');
 }
 $('room-leave').onclick = leaveRoom;
+// Vercel edition: a room lives in its host's browser, so it closes when the host leaves or drops
+socket.on('room:closed', ({ reason } = {}) => {
+  room = null;
+  endGame();
+  show('screen-lobby');
+  alert(reason || 'Phòng đã đóng.');
+});
 
 $('room-ready').onclick = () => {
   const mine = myMember();
