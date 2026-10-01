@@ -85,6 +85,18 @@ User: "cần google login, và chỉ login được với account @everfit.io �
   - a cleared browser with the same Google account goes straight to the lobby with the saved pilot;
   - a taken name is refused.
 
+## 2d. Outfits (2026-10-01)
+
+- **Look string:** the player's look travels in the old `gender` field: `"<pilot>[.h<n>][.g<n>][.s<n>]"`, e.g. `f2.h3.g1`.
+  - `shared/outfits.js` parses and validates it (`cleanLook`, re-exported as `cleanGender` in `shared/ids.js`), so the server, the Vercel API and the host worker all accept and store it unchanged.
+- **Drawing:** `assets.js pilotImage(look)` dresses a base pilot from `outfits.jpg` (5 × 3 grid) using measured `PILOT_FIT` anchors per pilot:
+  - hat brim line, eye line and torso box;
+  - an `arms` polygon redrawn over tops, so vests sit under the sleeves;
+  - capes go behind the body;
+  - the nón lá's chin ribbon is cropped.
+- **Sizing:** dressed canvases are padded, with `baseW`/`baseH`/`padL`/`padT`, and `xeSprite` seats riders by the bare pilot so their size doesn't change. Caches key on the look string.
+- **Sessions:** a resumed session must not send the browser's look (it would overwrite the account's); only account creation and `player:gender` save it.
+
 ## 3. Match flow
 
 1. `room:start` → server builds the mask (painted, possibly mirrored) and the spawns, and emits `game:start` (snapshot, `phase:'loading'`).

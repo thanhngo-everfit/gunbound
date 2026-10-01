@@ -522,3 +522,25 @@ input, select { background: #05112e; border-color: #9cd0ff; }
 .result-note { margin: 4px auto 8px; max-width: 560px; padding: 6px 12px; border-radius: 10px; background: rgba(255, 190, 60, .16); border: 1px solid rgba(255, 210, 90, .55); color: #ffe6a0; font-size: 14px; font-weight: 700; line-height: 1.4; }
 
 .logout-btn { white-space: nowrap; }
+
+/* trang phục (wardrobe) */
+.wardrobe-btn { margin-bottom: 6px; }
+.gender-pick.small .wardrobe-btn.small { margin: 0 0 0 6px; background: linear-gradient(180deg, #fff27a, #f0a800); color: #5a2a00; border-color: #fffbd0; }
+#wardrobe-modal { z-index: 60; position: fixed; }
+.wardrobe-card { position: relative; width: 860px; max-width: calc(100vw - 32px); padding: 16px 20px 18px; }
+.wd-body { display: flex; gap: 18px; margin-top: 8px; }
+.wd-preview { display: flex; flex-direction: column; gap: 8px; }
+.wd-preview canvas { border-radius: 14px; background: radial-gradient(ellipse at 50% 70%, #5b86c8, #1e3566 75%); }
+#wd-pilot { width: 300px; height: 340px; } #wd-rider { width: 300px; height: 200px; }
+.wd-right { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+.wd-label { color: #cfe0ff; font-weight: 800; line-height: 1.4; }
+.wd-pilots, .wd-tabs { display: flex; gap: 8px; flex-wrap: wrap; }
+.wd-pilots button, .wd-tabs button, .wd-items button { cursor: pointer; border-radius: 10px; border: 2px solid #4a6fb0; background: #183766; color: #d8ecff; font-weight: 800; line-height: 1.4; }
+.wd-pilots button { display: flex; flex-direction: column; align-items: center; padding: 4px 10px; font-size: 13px; }
+.wd-tabs button { padding: 6px 16px; font-size: 15px; }
+.wd-items { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.wd-items button { display: flex; flex-direction: column; align-items: center; padding: 6px 4px; font-size: 13px; }
+.wd-items canvas { width: 88px; height: 72px; }
+.wd-pilots button.on, .wd-tabs button.on, .wd-items button.on { background: linear-gradient(180deg, #fff27a, #f0a800); color: #5a2a00; border-color: #fffbd0; }
+.wd-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 12px; }
+@media (max-width: 760px) { .wd-body { flex-direction: column; } }

@@ -3,9 +3,10 @@ import { MAPS } from '/shared/physics.js';
 import { drawPortrait, hairFor } from './art.js';
 import { Sfx } from './fx.js';
 import { Game, esc, shotDmgText } from './game.js';
-import { loadAssets, ASSETS, xeSprite, drawSmooth, iconUrl, rankIcon } from './assets.js';
+import { loadAssets, ASSETS, xeSprite, drawSmooth, iconUrl, rankIcon, pilotImage } from './assets.js';
 import { RANK_LIST, DRAGON_MIN_GAMES } from '/shared/ranks.js';
 import { createSocket } from './net.js';
+import { parseLook, lookString, cleanLook, ITEMS, SLOTS, PILOTS, PILOT_NAMES } from '/shared/outfits.js';
 
 const $ = id => document.getElementById(id);
 const socket = await createSocket();
@@ -52,7 +53,7 @@ function renderMe() {
   $('mp-games').textContent = pr ? pr.games : 0;
   $('mp-rate').textContent = (pr ? pr.winRate : 0) + '%';
   $('mp-gold').innerHTML = `${iconUrl('gold') ? `<img class="ico" src="${iconUrl('gold')}" alt="">` : ''}${pr ? pr.gold : 0}`;
-  const cv = $('me-card-pilot'), ctx = cv.getContext('2d'), pilot = ASSETS.pilot[gender];
+  const cv = $('me-card-pilot'), ctx = cv.getContext('2d'), pilot = pilotImage(gender);
   ctx.clearRect(0, 0, cv.width, cv.height);
   if (pilot) {
     const k = (cv.height * 0.95) / pilot.height;
@@ -80,23 +81,71 @@ function show(id) {
 
 // ---------- pilot gender ----------
 
-const PILOTS = ['m', 'f', 'm2', 'f2'];
-let gender = PILOTS.includes(store.get('tc-gender')) ? store.get('tc-gender') : 'm';
+// `gender` is the whole look: pilot + outfit items, e.g. "f2.h3.g1" (shared/outfits.js)
+let gender = cleanLook(store.get('tc-gender') || 'm');
 function renderGender() {
-  for (const b of document.querySelectorAll('.gender-pick [data-g]')) b.classList.toggle('on', b.dataset.g === gender);
+  const base = parseLook(gender).pilot;
+  for (const b of document.querySelectorAll('.gender-pick [data-g]')) b.classList.toggle('on', b.dataset.g === base);
 }
-for (const b of document.querySelectorAll('.gender-pick [data-g]')) {
-  b.onclick = () => {
-    gender = b.dataset.g;
-    store.set('tc-gender', gender);
-    renderGender();
-    drawPortrait($('logo-xe'), 'rong', 'A', 40, undefined, gender);
-    renderMe();
-    if (me) { socket.emit('player:gender', { gender }); buildXeGrid(); renderRoom(); }
-    // the server keeps the pilot on the account, so it sticks on the next visit
-  };
+// wear a new look everywhere; the server keeps it on the account so it sticks on the next visit
+function setLook(look) {
+  gender = cleanLook(look);
+  store.set('tc-gender', gender);
+  renderGender();
+  drawPortrait($('logo-xe'), 'rong', 'A', 40, undefined, gender);
+  renderMe();
+  if (me) { socket.emit('player:gender', { gender }); buildXeGrid(); renderRoom(); }
 }
+// the quick pilot buttons swap the pilot and keep the outfit
+for (const b of document.querySelectorAll('.gender-pick [data-g]')) b.onclick = () => setLook(lookString({ ...parseLook(gender), pilot: b.dataset.g }));
 renderGender();
+
+// ---------- trang phục (wardrobe) ----------
+let draft = null, wdTab = 'h';
+function openWardrobe() {
+  draft = parseLook(gender);
+  $('wardrobe-modal').classList.add('show');
+  renderWardrobe();
+}
+const closeWardrobe = () => $('wardrobe-modal').classList.remove('show');
+function thumb(cv, img, fill = 0.86) {
+  const ctx = cv.getContext('2d');
+  ctx.clearRect(0, 0, cv.width, cv.height);
+  if (!img) return;
+  const k = Math.min((cv.width * fill) / img.width, (cv.height * fill) / img.height);
+  drawSmooth(ctx, img, (cv.width - img.width * k) / 2, (cv.height - img.height * k) / 2, img.width * k, img.height * k);
+}
+function renderWardrobe() {
+  const look = lookString(draft);
+  // previews: the dressed pilot, and riding the xe picked in the room (or the dragon)
+  const pv = $('wd-pilot'), pctx = pv.getContext('2d'), p = pilotImage(look);
+  pctx.clearRect(0, 0, pv.width, pv.height);
+  if (p) { const k = Math.min((pv.width * 0.92) / p.width, (pv.height * 0.96) / p.height); drawSmooth(pctx, p, (pv.width - p.width * k) / 2, pv.height - p.height * k, p.width * k, p.height * k); }
+  const xe = myMember()?.xe && myMember().xe !== 'random' ? myMember().xe : 'rong';
+  drawPortrait($('wd-rider'), xe, myMember()?.team || 'A', 40, undefined, look);
+  $('wd-pilots').innerHTML = PILOTS.map(id => `<button type="button" data-p="${id}" class="${draft.pilot === id ? 'on' : ''}"><canvas width="56" height="56"></canvas>${PILOT_NAMES[id]}</button>`).join('');
+  for (const b of $('wd-pilots').children) {
+    thumb(b.querySelector('canvas'), ASSETS.pilot[b.dataset.p], 1);
+    b.onclick = () => { draft.pilot = b.dataset.p; renderWardrobe(); };
+  }
+  $('wd-tabs').innerHTML = SLOTS.map(s => `<button type="button" data-t="${s.key}" class="${wdTab === s.key ? 'on' : ''}">${s.icon} ${s.name}</button>`).join('');
+  for (const b of $('wd-tabs').children) b.onclick = () => { wdTab = b.dataset.t; renderWardrobe(); };
+  const items = [{ n: 0, name: 'Không đeo' }, ...ITEMS[wdTab]];
+  $('wd-items').innerHTML = items.map(it => `<button type="button" data-n="${it.n}" class="${draft[wdTab] === it.n ? 'on' : ''}"><canvas width="88" height="72"></canvas><span>${it.name}</span></button>`).join('');
+  for (const b of $('wd-items').children) {
+    const n = Number(b.dataset.n);
+    if (n) thumb(b.querySelector('canvas'), ASSETS.outfit[wdTab][n]);
+    else { const c = b.querySelector('canvas').getContext('2d'); c.font = '34px sans-serif'; c.textAlign = 'center'; c.fillText('🚫', 44, 48); }
+    b.onclick = () => { draft[wdTab] = n; renderWardrobe(); };
+  }
+}
+$('wardrobe-open').onclick = openWardrobe;
+$('wardrobe-open-room').onclick = openWardrobe;
+$('wardrobe-close').onclick = closeWardrobe;
+$('wardrobe-modal').onclick = e => { if (e.target.id === 'wardrobe-modal') closeWardrobe(); };
+$('wd-reset').onclick = () => { draft = { pilot: draft.pilot, h: 0, g: 0, s: 0 }; renderWardrobe(); };
+$('wd-save').onclick = () => { setLook(lookString(draft)); closeWardrobe(); };
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeWardrobe(); });
 
 // ---------- login ----------
 // Google sign-in (the server checks the token). One Google account = one game account:
@@ -117,7 +166,8 @@ function showLoginStep(step) {
 }
 
 function hello(data) {
-  socket.emit('hello', { ...data, gender }, res => {
+  // the look is only sent when creating the account; a resumed session takes the one saved on the account
+  socket.emit('hello', data.name ? { ...data, gender } : data, res => {
     if (res.needName) {
       // a new Google account: choose a name (and pilot) once
       showLoginStep('name');
@@ -138,7 +188,7 @@ function hello(data) {
     pendingCredential = null;
     loginError('');
     store.set('tc-token', res.token);
-    gender = PILOTS.includes(res.gender) ? res.gender : gender;
+    gender = cleanLook(res.gender || gender);
     store.set('tc-gender', gender);
     renderGender();
     $('lobby-me').textContent = '👤 ' + res.name;

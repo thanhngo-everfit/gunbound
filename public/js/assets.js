@@ -1,6 +1,7 @@
 // Loads the painted art (Gamma-generated) and cuts xe sprites out of their flat magenta/green backgrounds.
 import { XE_LIST } from '/shared/xe.js';
 import { MAP_IDS, registerMask } from '/shared/physics.js';
+import { parseLook, ITEMS } from '/shared/outfits.js';
 
 const GREEN_BG = new Set(['bachtuoc', 'tethien', 'phuong']);
 const PILOT_GREEN = { m: false, f: true };
@@ -14,7 +15,7 @@ export const SEATS = {
   gau: [0.38, 0.36, 0.5], canhcut: [0.36, 0.2, 0.55], tho: [0.43, 0.5, 0.44],
 };
 
-export const ASSETS = { xe: {}, pilot: {}, bg: {}, proj: {}, terrain: {}, icons: {}, ready: false };
+export const ASSETS = { xe: {}, pilot: {}, bg: {}, proj: {}, terrain: {}, icons: {}, outfit: { h: {}, g: {}, s: {} }, ready: false };
 const composites = new Map();
 export const resetComposites = () => composites.clear();
 // Pilot layering (user feedback 2026-10-01: arms and legs pasted over the animal looked clumsy).
@@ -403,18 +404,89 @@ export function drawSmooth(ctx, img, x, y, w, h) {
   ctx.drawImage(lv, x, y, w, h);
 }
 
+// ---------- trang phục (outfits) ----------
+// Items from outfits.jpg (5 columns × 3 rows: hats, glasses, tops) are fitted to each base pilot with anchors
+// measured on the pilot sprites (fractions of the pilot image, facing right):
+//   hat: brim line (y), centre and width · glasses: eye-line centre and width · top: torso box
+//   arms: the reaching arms, redrawn over a top so the vest sits under the sleeves like real clothes
+const PILOT_FIT = {
+  m: { hat: [0.56, 0.27, 0.86], eyes: [0.68, 0.41, 0.5], top: [0.27, 0.55, 0.72, 0.84],
+    arms: [[0.44, 0.57], [0.62, 0.57], [0.9, 0.6], [0.99, 0.62], [0.99, 0.74], [0.8, 0.76], [0.62, 0.75], [0.5, 0.72], [0.44, 0.66]] },
+  f: { hat: [0.55, 0.28, 0.86], eyes: [0.67, 0.43, 0.48], top: [0.27, 0.56, 0.72, 0.84],
+    arms: [[0.44, 0.58], [0.62, 0.58], [0.9, 0.6], [0.99, 0.62], [0.99, 0.74], [0.8, 0.76], [0.62, 0.75], [0.5, 0.72], [0.44, 0.66]] },
+  m2: { hat: [0.6, 0.25, 0.88], eyes: [0.64, 0.42, 0.56], top: [0.26, 0.54, 0.7, 0.82],
+    arms: [[0.42, 0.57], [0.6, 0.6], [0.85, 0.6], [0.99, 0.62], [0.99, 0.73], [0.6, 0.74], [0.48, 0.72], [0.42, 0.66]] },
+  f2: { hat: [0.6, 0.28, 0.7], eyes: [0.63, 0.42, 0.44], top: [0.36, 0.56, 0.74, 0.82],
+    arms: [[0.5, 0.58], [0.7, 0.6], [0.98, 0.6], [0.98, 0.72], [0.72, 0.73], [0.55, 0.72], [0.5, 0.66]] },
+};
+// per item: where its own "sits here" line is, as a fraction of the sprite height (the non lá's straps hang below its brim),
+// and tops worn behind the body (the cape)
+// the nón lá's chin ribbon is cut off (it crossed the face); its brim is the bottom of what's left
+const HAT_BASE = {}, HAT_BASE_DEFAULT = 0.9, HAT_CROP = { 1: 0.6 };
+const TOP_BEHIND = new Set([2]);
+const OUTFIT_SHEET = { src: '/assets/sheets/outfits.jpg', green: true, cols: 5, rows: 3, slots: ['h', 'g', 's'] };
+
+async function loadOutfits() {
+  const img = await loadImg(OUTFIT_SHEET.src);
+  if (!img) return;
+  const sheet = cutOut(img, OUTFIT_SHEET.green, false, true), cw = 1000 / OUTFIT_SHEET.cols, ch = 1000 / OUTFIT_SHEET.rows, m = 10;
+  OUTFIT_SHEET.slots.forEach((slot, r) => ITEMS[slot].forEach(it => {
+    const c = it.n - 1;
+    let img = cropBox(sheet, [c * cw + m, r * ch + m, (c + 1) * cw - m, (r + 1) * ch - m], [], [1000, 1000]);
+    const keep = slot === 'h' && HAT_CROP[it.n];
+    if (keep) { const k = document.createElement('canvas'); k.width = img.width; k.height = Math.round(img.height * keep); k.getContext('2d').drawImage(img, 0, 0); img = k; }
+    ASSETS.outfit[slot][it.n] = img;
+  }));
+}
+
+// The base pilot wearing the items in a look string ("f2.h3.g1"). The canvas is padded for hats and capes;
+// baseW/baseH and padL/padT say where the pilot itself sits so riders stay the same size.
+const dressed = new Map();
+export function pilotImage(look) {
+  const L = parseLook(look), base = ASSETS.pilot[L.pilot] || ASSETS.pilot.m;
+  if (!base || (!L.h && !L.g && !L.s)) return base;
+  const key = look;
+  if (dressed.has(key)) return dressed.get(key);
+  const fit = PILOT_FIT[L.pilot] || PILOT_FIT.m, W = base.width, H = base.height;
+  const padT = Math.round(H * 0.4), padL = Math.round(W * 0.2), padR = Math.round(W * 0.1);
+  const c = document.createElement('canvas');
+  c.width = W + padL + padR; c.height = H + padT;
+  const x = c.getContext('2d');
+  const at = (img, cx, cy, w, baseFrac = 0.5) => { const h = (img.height / img.width) * w; x.drawImage(img, padL + cx - w / 2, padT + cy - h * baseFrac, w, h); };
+  const top = L.s && ASSETS.outfit.s[L.s], hat = L.h && ASSETS.outfit.h[L.h], glasses = L.g && ASSETS.outfit.g[L.g];
+  const [tx0, ty0, tx1, ty1] = fit.top;
+  // a cape hangs behind the back, from the shoulders
+  if (top && TOP_BEHIND.has(L.s)) { const w = (tx1 - tx0) * W * 1.15; at(top, tx0 * W + w * 0.12, ty0 * H - w * 0.08, w, 0); }
+  x.drawImage(base, padL, padT);
+  if (top && !TOP_BEHIND.has(L.s)) {
+    const w = (tx1 - tx0) * W, h = (ty1 - ty0) * H;
+    x.drawImage(top, padL + tx0 * W, padT + ty0 * H, w, h);
+    // the sleeves go back on top of the vest
+    x.save(); x.beginPath();
+    fit.arms.forEach(([ax, ay], i) => (i ? x.lineTo : x.moveTo).call(x, padL + ax * W, padT + ay * H));
+    x.closePath(); x.clip(); x.drawImage(base, padL, padT); x.restore();
+  }
+  if (glasses) at(glasses, fit.eyes[0] * W, fit.eyes[1] * H, fit.eyes[2] * W);
+  if (hat) at(hat, fit.hat[0] * W, fit.hat[1] * H, fit.hat[2] * W, HAT_BASE[L.h] ?? HAT_BASE_DEFAULT);
+  Object.assign(c, { baseW: W, baseH: H, padL, padT });
+  dressed.set(key, c);
+  return c;
+}
+
 // Animal + pilot merged into one canvas. animalH lets callers size by the animal, not the rider.
 export function xeSprite(xe, gender = 'm') {
   const animal = ASSETS.xe[xe];
   if (!animal) return null;
-  const pilot = gender === null ? null : ASSETS.pilot[gender] || ASSETS.pilot.m;
+  const pilot = gender === null ? null : pilotImage(gender);
   const seat = SEATS[xe];
   if (!pilot || !seat) return Object.assign(animal, { animalH: animal.height, footY: animal.height, ax: 0, ay: 0, pilotRect: null });
 
   const key = xe + gender;
   if (composites.has(key)) return composites.get(key);
-  const ph = animal.height * seat[2], pw = (ph * pilot.width) / pilot.height;
-  const px = animal.width * seat[0] - pw * 0.42, py = animal.height * seat[1] - ph * 0.8;
+  // size and seat by the bare pilot; a dressed pilot's canvas is just padded around it
+  const bw = pilot.baseW || pilot.width, bh = pilot.baseH || pilot.height, k = (animal.height * seat[2]) / bh;
+  const px = animal.width * seat[0] - bw * k * 0.42 - (pilot.padL || 0) * k, py = animal.height * seat[1] - bh * k * 0.8 - (pilot.padT || 0) * k;
+  const pw = pilot.width * k, ph = pilot.height * k;
   const top = Math.min(0, py), left = Math.min(0, px), right = Math.max(animal.width, px + pw);
   const c = document.createElement('canvas');
   c.width = Math.ceil(right - left); c.height = Math.ceil(animal.height - top);
@@ -515,7 +587,7 @@ let loading = null;
 export function loadAssets() { return (loading ||= loadAll()); }
 
 async function loadAll() {
-  const [xeA, xeB, pilotSheet, xe2, xe3] = await Promise.all([...XE_SHEETS.map(sh => loadSheet(sh)), loadSheet(PILOT_SHEET), loadSheet(XE2_SHEET, true), loadSheet(XE3_SHEET, true), loadProjectiles(), loadIcons()]);
+  const [xeA, xeB, pilotSheet, xe2, xe3] = await Promise.all([...XE_SHEETS.map(sh => loadSheet(sh)), loadSheet(PILOT_SHEET), loadSheet(XE2_SHEET, true), loadSheet(XE3_SHEET, true), loadProjectiles(), loadIcons(), loadOutfits()]);
   const xeSheet = xeA && xeB;
   if (xeA) Object.assign(ASSETS.xe, xeA);
   if (xeB) Object.assign(ASSETS.xe, xeB);

@@ -6,5 +6,7 @@ export function pidOf(name) {
   return 'u' + h.toString(36);
 }
 export const cleanName = s => String(s || '').replace(/\s+/g, ' ').trim().slice(0, 16);
-export const PILOTS = ['m', 'f', 'm2', 'f2'];
-export const cleanGender = g => (PILOTS.includes(g) ? g : 'm');
+// the `gender` field carries the player's whole look: pilot + outfit items (shared/outfits.js)
+import { cleanLook, PILOTS } from './outfits.js';
+export { PILOTS };
+export const cleanGender = cleanLook;

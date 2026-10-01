@@ -53,6 +53,7 @@
         <div class="mp-name" id="mp-name"></div>
         <div class="mp-rank" id="mp-rank"></div>
         <div class="mp-stats"><div><b id="mp-games">0</b><span>Trận</span></div><div><b id="mp-rate">0%</b><span>Thắng</span></div><div><b id="mp-gold">0</b><span>Vàng</span></div></div>
+        <button class="btn gold wardrobe-btn" type="button" id="wardrobe-open">👕 TRANG PHỤC</button>
         <button class="btn howto-btn" type="button" id="howto-open">📖 CÁCH CHƠI</button>
       </div>
       <div class="panel rooms-panel">
@@ -106,7 +107,8 @@
       <div class="xe-pick">
         <div class="pick-head"><div class="panel-title">Chọn xe</div>
           <div class="gender-pick small" id="room-gender"><span>Phi công:</span>
-            <button type="button" data-g="m">👦 Nam 1</button><button type="button" data-g="f">👧 Nữ 1</button><button type="button" data-g="m2">👦 Nam 2</button><button type="button" data-g="f2">👧 Nữ 2</button></div></div>
+            <button type="button" data-g="m">👦 Nam 1</button><button type="button" data-g="f">👧 Nữ 1</button><button type="button" data-g="m2">👦 Nam 2</button><button type="button" data-g="f2">👧 Nữ 2</button>
+            <button type="button" class="wardrobe-btn small" id="wardrobe-open-room">👕 Trang phục</button></div></div>
         <div class="xe-grid" id="xe-grid"></div>
         <div class="xe-detail" id="xe-detail"></div>
       </div>
@@ -242,6 +244,26 @@
     </div>
   </section>
 
+  <!-- Trang phục: pilot + hat / glasses / top, like Gunbound's avatar room -->
+  <div class="modal" id="wardrobe-modal">
+    <div class="result-card wardrobe-card">
+      <button class="rider-x" id="wardrobe-close" title="Đóng (Esc)">✕</button>
+      <div class="panel-title" style="font-size:26px">👕 Trang phục</div>
+      <div class="wd-body">
+        <div class="wd-preview">
+          <canvas id="wd-pilot" width="300" height="340"></canvas>
+          <canvas id="wd-rider" width="300" height="200"></canvas>
+        </div>
+        <div class="wd-right">
+          <div class="wd-label">Phi công</div>
+          <div class="wd-pilots" id="wd-pilots"></div>
+          <div class="wd-tabs" id="wd-tabs"></div>
+          <div class="wd-items" id="wd-items"></div>
+        </div>
+      </div>
+      <div class="wd-actions"><button class="btn ghost" id="wd-reset" type="button">Bỏ hết đồ</button><button class="btn gold big" id="wd-save" type="button">LƯU</button></div>
+    </div>
+  </div>
   <div class="modal" id="rider-modal">
     <div class="result-card rider-card">
       <button class="rider-x" id="rider-close" title="Đóng (Esc)">✕</button>

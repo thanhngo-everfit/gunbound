@@ -69,8 +69,8 @@ async function googleLogin({ token, credential, name, gender }) {
 const lobbyState = () => ({ rooms: lobbyList(), online: [...players.values()].filter(p => p.socket).length, leaderboard: leaderboard(10) });
 const broadcastLobby = () => io.to('lobby').emit('lobby', lobbyState());
 const cleanName = s => String(s || '').replace(/\s+/g, ' ').trim().slice(0, 16);
-const PILOTS = ['m', 'f', 'm2', 'f2'];
-const cleanGender = g => (PILOTS.includes(g) ? g : 'm');
+// `gender` is the player's look: pilot + outfit items (shared/outfits.js)
+import { cleanGender } from '../shared/ids.js';
 
 function leaveRoom(p) {
   const room = rooms.get(p.roomId);
