@@ -416,15 +416,16 @@ export function drawSmooth(ctx, img, x, y, w, h) {
 // Anchors are measured on the base pilots (fractions of the pilot image, facing right):
 //   hat: [centre x, brim y, width] · eyes: [centre x, y, glasses width] · tee: polygon around the shirt · chest: emblem spot
 const PILOT_FIT = {
+  // tee: a loose box from the neck to the waist (the tee itself is flood-filled inside it)
   // head: skull centre x, brim (hairline) y, half width, skull top · eyes: near eye, far eye, ear, lens radius
   m: { head: [0.5, 0.25, 0.37, 0.03], eyes: [[0.47, 0.365], [0.69, 0.365], [0.24, 0.4], 0.082], chest: [0.35, 0.6], back: [0.22, 0.52],
-    tee: [[0.18, 0.5], [0.45, 0.5], [0.6, 0.55], [0.62, 0.76], [0.18, 0.78]] },
+    tee: [[0.1, 0.49], [0.76, 0.49], [0.76, 0.76], [0.1, 0.78]] },
   f: { head: [0.48, 0.26, 0.36, 0.06], eyes: [[0.48, 0.375], [0.69, 0.37], [0.22, 0.4], 0.082], chest: [0.33, 0.61], back: [0.22, 0.53],
-    tee: [[0.2, 0.52], [0.45, 0.53], [0.6, 0.56], [0.62, 0.77], [0.2, 0.78]] },
+    tee: [[0.1, 0.5], [0.76, 0.5], [0.76, 0.77], [0.1, 0.78]] },
   m2: { head: [0.52, 0.3, 0.37, 0.03], eyes: [[0.5, 0.385], [0.71, 0.385], [0.26, 0.42], 0.08], chest: [0.35, 0.62], back: [0.25, 0.55],
-    tee: [[0.22, 0.53], [0.48, 0.53], [0.62, 0.58], [0.64, 0.78], [0.22, 0.79]] },
+    tee: [[0.1, 0.51], [0.78, 0.51], [0.78, 0.78], [0.1, 0.79]] },
   f2: { head: [0.56, 0.27, 0.33, 0.05], eyes: [[0.53, 0.36], [0.74, 0.36], [0.33, 0.37], 0.075], chest: [0.42, 0.6], back: [0.34, 0.53],
-    tee: [[0.33, 0.51], [0.56, 0.5], [0.68, 0.56], [0.66, 0.75], [0.33, 0.76]] },
+    tee: [[0.2, 0.49], [0.72, 0.49], [0.72, 0.75], [0.2, 0.76]] },
 };
 const OUTFIT_SHEET = { src: '/assets/sheets/outfits.jpg', green: true, cols: 5, rows: 3 };
 // tops: tee colour, an optional pattern and chest emblem, and the superhero's cape (a sprite from the sheet's 3rd row)
