@@ -330,6 +330,8 @@ const PROJ_FIXES = [
     ['gau', 's1'], ['gau', 's2'], ['gau', 'ss'], // snowball, ice cube, blizzard orb
     ['canhcut', 's1'], ['canhcut', 's2'], ['canhcut', 'ss'], // frozen fish, belly-sliding penguin, ice billiard ball
     ['tho', 's1'], ['tho', 's2'], ['tho', 'ss']] }, // mochi, jade pestle, full moon
+  // Tượng Tinh SS (2026-10-01): the lava mammoth curled into a burning ball (cell 1 of 9 candidates on proj-h)
+  { src: '/assets/sheets/proj-h.jpg', green: false, n: 3, cells: [['voi', 'ss'], null, null, null, null, null, null, null, null] },
   // Bọ Cạp S1 keeps the venom stinger: the new sheet drew whole scorpions for both S1 and SS
   { src: '/assets/sheets/proj-d.jpg', green: false, n: 2, cells: [['bocap', 's1'], null, null, null] },
 ];

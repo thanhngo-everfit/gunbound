@@ -17,10 +17,10 @@ const RIBBON_LINGER = 24;
 const RIBBON_GAP = 5; // sim frames kept clear right behind the shell
 // Projectile orientation, for the 2026-10-01 sheets (proj-f / proj-g) and the new xe (proj-e).
 // spun in flight: balls, splats, the banana, the halo, the spiral tentacle
-const SPIN = new Set(['tethien-s1', 'kylan-s2', 'voi-s1', 'bachtuoc-s1', 'bachtuoc-s2', 'gau-s2', 'gau-ss', 'canhcut-ss', 'tho-s2']);
+const SPIN = new Set(['tethien-s1', 'kylan-s2', 'voi-s1', 'voi-ss', 'bachtuoc-s1', 'bachtuoc-s2', 'gau-s2', 'gau-ss', 'canhcut-ss', 'tho-s2']);
 // drawn as-is, never turned with the flight (only mirrored when flying left): the stomping foot, the dripping
 // fireball, the eye sigil, the nimbus cloud, the kraken rising from its ink swirl
-const NO_ROTATE = new Set(['voi-ss', 'rong-s2', 'cu-s2', 'tethien-ss', 'bachtuoc-ss', 'tho-s1', 'tho-ss']);
+const NO_ROTATE = new Set(['rong-s2', 'cu-s2', 'tethien-ss', 'bachtuoc-ss', 'tho-s1', 'tho-ss']);
 // sprites whose "forward" isn't to the right: the crystal shard, the feather and the staff are painted pointing up-right,
 // the owl's dart down-left
 const ROT_OFF = { 'kylan-s1': 0.87, 'phuong-s1': 0.87, 'tethien-s2': 0.9, 'cu-s1': -2.36, 'gau-s1': Math.PI, 'canhcut-s1': 0.8, 'canhcut-s2': -0.33 };
@@ -1787,7 +1787,7 @@ export class Game {
       case 'kylan': this.beams.push({ x, y, life: 70, max: 70, wide: 90 }); fx.sparkle(x, y - 20, '#fff6c4'); fx.sparkle(x, y - 40, '#b9f4ff'); burst(40, '#fff3a0', 5, 60, 4, -0.03); break;
       case 'kimquy': for (let i = 0; i < 3; i++) fx.add({ x, y, ring: true, life: 30 + i * 8, max: 30 + i * 8, r: 10 + i * 12, grow: 3 + i, color: '#ffcf3a' }); burst(30, '#ffe16a', 7, 40, 3); break;
       case 'phuong': for (let i = 0; i < 40; i++) fx.flame(x + (Math.random() - 0.5) * r * 2, y); burst(50, '#ff7a1a', 8, 45, 5, 0.05); this.flash = { color: '#ff7a1a', life: 14, max: 14 }; break;
-      case 'voi': this.cracks.push({ x, y, life: 80, max: 80, lines: makeCracks(x, y, r) }); this.shake = 22; fx.debris(x, y, 60, '#8a7a6a'); break;
+      case 'voi': this.cracks.push({ x, y, life: 80, max: 80, lines: makeCracks(x, y, r) }); this.shake = 22; fx.debris(x, y, 50, '#3a3238'); column('#ff7a1a', 5, 40); column('#ffd23a', 3, 20); this.flash = { color: '#ff5a10', life: 12, max: 12 }; break;
       case 'bachtuoc': this.rising.push({ key: 'bachtuoc', x, y, life: 55, max: 55, size: r * 2.4 }); burst(30, '#b765d8', 6, 50, 5); break;
       case 'bocap':
         for (let i = 0; i < 40; i++) fx.add({ x: x + (Math.random() - 0.5) * r * 1.5, y: y - Math.random() * r, vx: (Math.random() - 0.5) * 0.8, vy: -0.4 - Math.random() * 0.6, g: 0, drag: 0.99, life: 90, max: 90, r: 10 + Math.random() * 14, color: 'rgba(80,230,110,0.35)', smoke: true });

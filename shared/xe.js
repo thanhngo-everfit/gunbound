@@ -98,7 +98,7 @@ export const XE_LIST = [
     shots: {
       s1: { name: 'Núi Lửa Phun', desc: 'Phun từ miệng núi lửa trên lưng (điểm bắn cao): đá nóng chảy nặng, phá đất rộng, đẩy nhẹ.', delay: 820, dmg: 250, r: 40, look: 'lavarock', carveMul: 1.4, push: 40, muzzle: { dx: -28, dy: 0 } },
       s2: { name: 'Ngà Dung Nham', desc: 'Bắn từ đầu ngà rực lửa (điểm bắn thấp, dễ vướng vách): khối dung nham đẩy văng rất xa.', delay: 860, dmg: 150, r: 40, look: 'magma', push: 130, muzzle: { dx: 1, dy: 26 } },
-      ss: { name: 'Voi Dậm', desc: 'Dậm chân làm đất nứt: sóng chấn động chạy dọc mặt đất hai bên, hất bật mọi xe trên đường.', delay: 1150, dmg: 250, r: 50, look: 'rock', quake: { dmg: 130, r: 26, range: 320, every: 45, push: 70 } },
+      ss: { name: 'Ma Mút Lăn', desc: 'Cuộn tròn thành quả cầu dung nham lao xuống: đất nứt, sóng chấn động chạy dọc mặt đất hai bên, hất bật mọi xe trên đường.', delay: 1150, dmg: 250, r: 50, look: 'rock', quake: { dmg: 130, r: 26, range: 320, every: 45, push: 70 } },
     },
   },
   {
