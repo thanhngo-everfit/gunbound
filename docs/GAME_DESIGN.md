@@ -155,6 +155,8 @@ The balance rule was congPha + doBen + coDong = 20 (ratings 1–10). Exact numbe
 | Lân Nhi | Kỳ Lân | wuxia "-nhi" pet names (Dung nhi) |
 | Tiểu Cụt | Chim Cánh Cụt | wuxia "tiểu" (Tiểu Long Nữ) |
 
+**Reins (2026-10-01).** User: "cánh tay của nhân vật như đưa vào không khí". The pilots' fists now hold reins or a handle: two sagging inked strands from the fists (`FISTS` per pilot) to a point on each xe (`REINS` in assets.js), such as the dragon's bridle, the qilin's neck, the turtle's crossbow, the owl's telescope or the bear's scarf. They are drawn in the rider composite and by `drawRigged`. Hầu Ca carries the pilot piggyback, so it has none.
+
 **Rider pop-up:** clicking a player's slot in the room opens a big animated preview of the rider on their xe, with the player's rank, the xe's names, role and passive. Hầu Ca now carries its pilot piggyback (the pilot peeks over its shoulder) instead of leaving them standing on the cloud behind.
 
 ### 4b. Legendary xe (Huyền thoại, random-only)

@@ -1,6 +1,6 @@
 // All visuals are drawn in code: xe, projectiles, terrain and sky.
 import { W, H, mulberry32 } from '/shared/physics.js';
-import { ASSETS, xeSprite, drawSmooth, rigFor, occPath } from './assets.js';
+import { ASSETS, xeSprite, drawSmooth, rigFor, occPath, drawReins } from './assets.js';
 
 export const TEAM_COLORS = { A: '#ff4d4d', B: '#3fa9ff' };
 
@@ -691,6 +691,7 @@ function drawRigged(ctx, img, xe, x0, y0, w, h, moves) {
     // the animal's back/saddle goes back over the pilot's hips and legs
     const occ = occPath(xe, ax, ay, aw, ah);
     if (occ) { ctx.save(); ctx.clip(occ); animal(); ctx.restore(); }
+    drawReins(ctx, img.reins, s, x0, y0);
   }
   return true;
 }

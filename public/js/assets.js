@@ -648,6 +648,29 @@ function trimmed(c) {
   return Object.assign(out, { trimX: x0, trimY: y0 });
 }
 
+// ---------- reins: the pilot's fists hold something (user: "cánh tay như đưa vào không khí") ----------
+// fists on the base pilots (near, far) and on the classic aviator art, as fractions of the bare pilot image
+const FISTS = { m: [[0.66, 0.6], [0.86, 0.56]], f: [[0.66, 0.61], [0.85, 0.56]], m2: [[0.68, 0.59], [0.87, 0.55]], f2: [[0.66, 0.6], [0.83, 0.57]] };
+const FISTS_CLASSIC = [[0.6, 0.64], [0.94, 0.6]];
+// where each xe's reins or handle are held to (fraction of the animal image), and their colour
+const REINS = {
+  rong: [[0.8, 0.47], '#e8b630'], kylan: [[0.72, 0.36], '#e8b630'], kimquy: [[0.5, 0.12], '#8a5a2a'],
+  phuong: [[0.62, 0.34], '#e8b630'], voi: [[0.72, 0.4], '#8a2a1a'], bachtuoc: [[0.88, 0.32], '#6b4a2a'],
+  bocap: [[0.72, 0.55], '#6b4a2a'], cu: [[0.72, 0.1], '#b98a2a'], camap: [[0.62, 0.22], '#6b4a2a'],
+  gau: [[0.62, 0.44], '#c8302e'], canhcut: [[0.6, 0.3], '#d8343a'], tho: [[0.66, 0.44], '#e8b630'],
+};
+export function drawReins(ctx, R, s = 1, x0 = 0, y0 = 0) {
+  if (!R) return;
+  const [ax, ay] = [x0 + R.anchor[0] * s, y0 + R.anchor[1] * s];
+  for (const [w, col] of [[R.lw * 2.4, '#1a1410'], [R.lw * 1.25, R.color]]) {
+    ctx.lineWidth = w * s; ctx.strokeStyle = col; ctx.lineCap = 'round';
+    for (const [fx, fy] of R.fists) {
+      const x = x0 + fx * s, y = y0 + fy * s, d = Math.hypot(ax - x, ay - y);
+      ctx.beginPath(); ctx.moveTo(x, y); ctx.quadraticCurveTo((x + ax) / 2, (y + ay) / 2 + d * 0.14, ax, ay); ctx.stroke();
+    }
+  }
+}
+
 // Animal + pilot merged into one canvas. animalH lets callers size by the animal, not the rider.
 export function xeSprite(xe, gender = 'm') {
   const animal = ASSETS.xe[xe];
@@ -672,6 +695,13 @@ export function xeSprite(xe, gender = 'm') {
     ctx.drawImage(pilot, px - left, py - top, pw, ph);
     const occ = occPath(xe, -left, -top, animal.width, animal.height);
     if (occ) { ctx.save(); ctx.clip(occ); ctx.drawImage(animal, -left, -top); ctx.restore(); }
+    // reins from both fists to the xe, so the hands hold something
+    const rein = REINS[xe], L = parseLook(gender), fists = ITEMS.s.find(it => it.n === L.s)?.classic ? FISTS_CLASSIC : FISTS[L.pilot] || FISTS.m;
+    if (rein) {
+      const fx0 = px - left + (pilot.padL || 0) * k, fy0 = py - top + (pilot.padT || 0) * k;
+      c.reins = { fists: fists.map(([fx, fy]) => [fx0 + fx * bw * k, fy0 + fy * bh * k]), anchor: [-left + rein[0][0] * animal.width, -top + rein[0][1] * animal.height], color: rein[1], lw: animal.height * 0.006 };
+      drawReins(ctx, c.reins);
+    }
   }
   c.behind = SEAT_BEHIND.has(xe);
   c.animalH = animal.height;
