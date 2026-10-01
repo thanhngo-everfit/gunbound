@@ -100,6 +100,7 @@ io.on('connection', socket => {
       me = { token: randomUUID(), pid: 'u' + nextPid++, name: user.name, gender: cleanGender(user.gender), socket, roomId: null };
       players.set(me.token, me);
     }
+    me.session = login.token;
     ack({ token: login.token, pid: me.pid, name: me.name, gender: me.gender, roomId: me.roomId });
     const r = room();
     if (r) r.onReconnect(me);
@@ -108,6 +109,18 @@ io.on('connection', socket => {
   });
 
   // the asking player also gets their own profile (rank, GP, progress), even outside the top 10
+  socket.on('logout', ok((_, ack = () => {}) => {
+    delete accounts.sessions[me.session];
+    saveAccounts();
+    leaveRoom(me);
+    players.delete(me.token);
+    me.socket = null;
+    me = null;
+    socket.join('lobby');
+    broadcastLobby();
+    ack({ ok: true });
+  }));
+
   socket.on('lobby:get', ok(() => socket.emit('lobby', { ...lobbyState(), me: profile(me.name) })));
 
   socket.on('room:create', ok(({ name, practice } = {}, ack = () => {}) => {

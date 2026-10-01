@@ -3,6 +3,7 @@
 // POST { credential }                → { needName, suggest } for a new Google account, else a session
 // POST { credential, name, gender }  → create the account with that (unique) name
 // POST { token, gender }             → remember a new pilot choice
+// POST { token, logout: true }       → end this session
 import { randomUUID } from 'node:crypto';
 import { redis } from './_lib/redis.js';
 import { handle, body } from './_lib/http.js';
@@ -24,7 +25,8 @@ const userOf = async name => {
 };
 
 export default handle(async (req, res) => {
-  const { token, credential, name: rawName, gender } = body(req);
+  const { token, credential, name: rawName, gender, logout } = body(req);
+  if (logout) { if (token) await redis('DEL', `sess:${token}`); return res.json({ ok: true }); }
   if (token && !credential) {
     const name = await redis('GET', `sess:${token}`);
     const user = await userOf(name);

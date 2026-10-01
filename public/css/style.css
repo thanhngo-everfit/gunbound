@@ -520,3 +520,5 @@ input, select { background: #05112e; border-color: #9cd0ff; }
 
 /* why a match didn't count for GP */
 .result-note { margin: 4px auto 8px; max-width: 560px; padding: 6px 12px; border-radius: 10px; background: rgba(255, 190, 60, .16); border: 1px solid rgba(255, 210, 90, .55); color: #ffe6a0; font-size: 14px; font-weight: 700; line-height: 1.4; }
+
+.logout-btn { white-space: nowrap; }

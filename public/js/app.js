@@ -169,6 +169,21 @@ async function startGoogle() {
   google.accounts.id.prompt();
 }
 
+// Đăng xuất: leave any room, end the session on the server, stop Google from signing straight back in
+$('logout-btn').onclick = () => {
+  if (!me || !confirm(`Đăng xuất tài khoản ${me.name}?`)) return;
+  let done = false;
+  const finish = () => {
+    if (done) return;
+    done = true;
+    store.set('tc-token', '');
+    try { window.google?.accounts?.id?.disableAutoSelect(); } catch {}
+    location.reload();
+  };
+  socket.emit('logout', { token: me.token }, finish);
+  setTimeout(finish, 3000); // don't hang on a dead connection
+};
+
 socket.on('connect', () => {
   // a remembered session skips the login screen; reconnects after a network drop resume it too
   const token = me?.token || store.get('tc-token');

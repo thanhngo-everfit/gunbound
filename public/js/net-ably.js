@@ -53,6 +53,14 @@ export class AblySocket {
       case 'room:create': return ack(await this.createRoom(data));
       case 'room:join': return ack(await this.joinRoom(String(data.id)));
       case 'room:leave': return this.leaveRoom();
+      case 'logout': {
+        if (this.room) await this.leaveRoom();
+        if (this.me) await api('/api/login', { token: this.me.token, logout: true }).catch(() => {});
+        try { await this.lobby?.presence.leave(); this.ably?.close(); } catch {}
+        this.me = null; this.ably = null;
+        sessionStorage.removeItem('tc-room');
+        return ack({ ok: true });
+      }
       case 'player:gender':
         // remember the pilot on the account, then tell the room
         if (this.me) { this.me.gender = data.gender; api('/api/login', { token: this.me.token, gender: data.gender }).catch(() => {}); }

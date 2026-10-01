@@ -28,6 +28,7 @@ function run([cmd, ...a]) {
       if (nx && alive(k)) return null;
       kv.set(k, String(v)); if (ex >= 0) ttl.set(k, Date.now() + Number(o[ex + 1]) * 1000); return 'OK';
     }
+    case 'DEL': { let n = 0; for (const k of a) n += kv.delete(k) ? 1 : 0; return n; }
     case 'EXPIRE': ttl.set(a[0], Date.now() + Number(a[1]) * 1000); return 1;
     case 'INCR': { const v = Number(kv.get(a[0]) || 0) + 1; kv.set(a[0], String(v)); return v; }
     case 'HGET': return hashes.get(a[0])?.get(a[1]) ?? null;
