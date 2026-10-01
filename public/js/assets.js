@@ -507,9 +507,8 @@ function paintTop(base, fit, n) {
 // The base pilot wearing the items in a look string ("f2.h3.g1"). The canvas is padded for hats and capes;
 // baseW/baseH and padL/padT say where the pilot itself sits so riders stay the same size.
 const dressed = new Map();
-// ---------- hair: each base pilot's hairstyle is a separable layer (Gunbound's "Head" items) ----------
-// Hair pixels are found by colour (the four pilots came from one Gamma image, so their hair, ink and shading match),
-// plus the ink outline around them; the eyes/brows box is never touched.
+// ---------- hair colour: the pilot's own hair, found by colour and dyed like the tops ----------
+// Hair pixels are found by colour, plus the ink outline around them; the eyes/brows box is never touched.
 const HAIR_KIND = { m: 'brown', f: 'brown', m2: 'orange', f2: 'pink' };
 function hsv(r, g, b) {
   const mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn;
@@ -571,46 +570,7 @@ function hairOf(id) {
   hairCache.set(id, out);
   return out;
 }
-// the head without its hair: hair and its outline cleared, the skull filled with skin and re-inked
-const baldCache = new Map();
-function baldHead(id, cap) {
-  const key = id + cap.join(',');
-  if (baldCache.has(key)) return baldCache.get(key);
-  const base = ASSETS.pilot[id], fit = PILOT_FIT[id], { mask, W, H } = hairOf(id), [hx, hy, hr, ht] = fit.head;
-  const c = document.createElement('canvas'); c.width = W; c.height = H;
-  const x = c.getContext('2d', { willReadFrequently: true }); x.drawImage(base, 0, 0);
-  // skin colour, sampled on the cheek
-  const [[nx, ny]] = fit.eyes, sk = x.getImageData(Math.round((nx + 0.06) * W), Math.round((ny + 0.08) * H), 1, 1).data;
-  const im = x.getImageData(0, 0, W, H), d = im.data;
-  for (let i = 0; i < W * H; i++) if (mask[i]) d[i * 4 + 3] = Math.round(d[i * 4 + 3] * (1 - mask[i]));
-  // crumbs of the old outline left floating around where the hair was: dark pixels with almost nothing around them
-  const chinY = (ny + 0.12) * H;
-  for (let pass = 0; pass < 2; pass++) for (let py = 2; py < Math.min(H - 2, H * 0.9); py++) for (let px = 2; px < W - 2; px++) {
-    const i = py * W + px, j = i * 4;
-    if (d[j + 3] < 40 || (d[j] + d[j + 1] + d[j + 2]) / 3 > 110 || (py > chinY && px > 0.36 * W && px < 0.72 * W)) continue;
-    let n = 0;
-    for (let oy = -2; oy <= 2; oy++) for (let ox = -2; ox <= 2; ox++) if (d[((py + oy) * W + px + ox) * 4 + 3] > 40) n++;
-    if (n < 10) d[j + 3] = 0;
-  }
-  x.putImageData(im, 0, 0);
-  // the scalp: an inked skin dome behind everything left of the face
-  // from the skull top down to the chin, so temples and ears under the old hair get skin too (only empty pixels are filled)
-  const chin = (ny + 0.12) * H, cx = hx * W, rx = hr * W * 0.95, cy = (ht * H + chin) / 2, ry = (chin - ht * H) / 2;
-  x.globalCompositeOperation = 'destination-over';
-  // the crown under the new hair is the new hair's colour, so wherever that hairstyle sits a little low it still reads as hair
-  x.save(); x.beginPath(); x.rect(0, 0, W, (ny - 0.075) * H); x.clip();
-  x.beginPath(); x.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2); x.fillStyle = `rgb(${cap[0]},${cap[1]},${cap[2]})`; x.fill();
-  x.restore();
-  x.beginPath(); x.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
-  x.fillStyle = `rgb(${sk[0]},${sk[1]},${sk[2]})`; x.fill();
-  // ink only the crown of the scalp; the face keeps its own outline lower down
-  x.beginPath(); x.ellipse(cx, cy, rx, ry, 0, Math.PI * 1.08, Math.PI * 1.92);
-  x.lineWidth = W * 0.012; x.strokeStyle = '#1a1410'; x.stroke();
-  x.globalCompositeOperation = 'source-over';
-  baldCache.set(key, c);
-  return c;
-}
-// a hairstyle layer, recoloured, as a canvas aligned to the target head: { back, front }
+// the pilot's hair layer, dyed, as canvases over the pilot: { back, front }
 const HAIR_COLORS = {
   1: '#2a2422', 2: '#f2c14e', 3: '#e9ecf2', 4: '#d8343a', 5: '#3d6fe0', 6: '#8a55d6', 7: '#3fae5a', 8: '#ff8ec2',
 };
@@ -649,7 +609,7 @@ export function pilotImage(look) {
   // the classic aviator set is the first pilot art, cap, goggles and jacket included
   if (ITEMS.s.find(it => it.n === L.s)?.classic) return ASSETS.pilotClassic[L.pilot] || ASSETS.pilot[L.pilot];
   const base = ASSETS.pilot[L.pilot] || ASSETS.pilot.m;
-  if (!base || (!L.h && !L.c && !L.s)) return base;
+  if (!base || (!L.c && !L.g && !L.s)) return base;
   if (dressed.has(look)) return dressed.get(look);
   const fit = PILOT_FIT[L.pilot] || PILOT_FIT.m, W = base.width, H = base.height;
   const padT = Math.round(H * 0.35), padL = Math.round(W * 0.25), padR = Math.round(W * 0.1);
@@ -658,20 +618,12 @@ export function pilotImage(look) {
   const x = c.getContext('2d');
   const at = (img, cx, cy, w, baseFrac = 0.5) => { const h = (img.height / img.width) * w; x.drawImage(img, padL + cx - w / 2, padT + cy - h * baseFrac, w, h); };
   const T = L.s && TOPS[L.s];
-  // hairstyle (any pilot's hair on this head) and hair colour
-  const style = L.h ? ITEMS.h.find(it => it.n === L.h)?.pilot : null, hairSrc = style || L.pilot;
-  const hair = (style && style !== L.pilot) || L.c ? hairLayers(hairSrc, L.pilot, L.c, W, H, padL, padT, c.width, c.height) : null;
-  // behind the pilot: the superhero's cape and hair that hangs behind the body
+  // hair colour: the pilot's own hair, dyed in place
+  const hair = L.c ? hairLayers(L.pilot, L.pilot, L.c, W, H, padL, padT, c.width, c.height) : null;
+  // behind the pilot: the superhero's cape
   if (T?.cape && ASSETS.outfit.cape) { const w = W * 0.5; at(ASSETS.outfit.cape, fit.back[0] * W - w * 0.18, fit.back[1] * H - w * 0.05, w, 0); }
-  // another pilot's hairstyle goes on a bald copy of this head (its tails behind the body); a colour on the pilot's
-  // own hair is just painted over it in place, like the tops
-  const swap = hair && style && style !== L.pilot;
-  if (swap) x.drawImage(hair.back, 0, 0);
-  const capColor = L.c && HAIR_COLORS[L.c] ? rgb(HAIR_COLORS[L.c]).map(v => Math.round(v * 0.8)) : hairOf(hairSrc).color;
-  let body = swap ? baldHead(L.pilot, capColor) : base;
-  if (T) body = paintTop(body, fit, L.s);
-  x.drawImage(body, padL, padT);
-  if (hair && !swap) x.drawImage(hair.back, 0, 0);
+  x.drawImage(T ? paintTop(base, fit, L.s) : base, padL, padT);
+  if (hair) x.drawImage(hair.back, 0, 0);
   if (hair) x.drawImage(hair.front, 0, 0);
   // glasses are drawn in code on the measured eyes (outfit-art.js), in the pilot's own ink width
   if (L.g) {

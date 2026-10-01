@@ -92,8 +92,7 @@ User: "cần google login, và chỉ login được với account @everfit.io �
 - **Drawing:** `assets.js pilotImage(look)` dresses a plain base pilot (`pilot-base.jpg`, fixed boxes, enclosed key gaps at `holesMin` 75) with `PILOT_FIT` anchors measured per pilot: hat brim, eye line, tee polygon, chest and back.
   - **Hair** (`hairOf` / `baldHead` / `hairLayers` in assets.js):
     - A hair mask comes from colour per pilot (brown / orange / pink HSV tests, inside a head zone, with brows, eyes and cheeks excluded), grown into the surrounding ink.
-    - A swap clears the target's hair and outline crumbs, then fills the crown with the new hair's colour and the temples with skin.
-    - The source hair is placed by the eyes (eye spacing and midpoint): front parts over the head, tails behind the body.
+    - Hairstyle swaps (bald head + transplant) were tried and removed; only the dye remains.
     - Dye multiplies the hair's own brightness, relative to its base tone.
   - Glasses are drawn in code (`outfit-art.js`) from `PILOT_FIT.head` (skull centre, brim y, half width, top) and `PILOT_FIT.eyes` (near eye, far eye, ear, lens radius).
     - Hats have a `back` layer drawn before the pilot and a `front` layer after it, so bands and brims wrap the head; ink width is `W * 0.009`.

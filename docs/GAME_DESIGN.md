@@ -193,6 +193,7 @@ Every shot has its own projectile sprite (30 total) and look key. Every SS has a
   - Tops are painted into the tee itself in code (`assets.js paintTop`: tee mask × pattern × the tee's own shading), so they always fit.
 - **Third pass (user: "áo thì ok mà nón với kính trông lỏ… sao ko tách tóc là 1 assets giống như nón", then "giữ kính lại"):** hats are gone. The head slot is the **hairstyle**, cut from the four base pilots (Tóc Rối, Tóc Búi, Tóc Nhím, Tóc Hai Bím), plus a **hair colour** painted into the hair like the tops (8 dyes). Glasses stay.
   - Nữ 2 keeps her twin tails (they hang over her arms) and only takes a colour, but others can borrow the tails.
+- **Fourth pass (user: "xoá kiểu tóc đi, xấu quá, để màu tóc là được rồi"):** hairstyle swapping is removed. Each pilot keeps its own hair and only the colour changes. The slots are now **Màu tóc** (8 dyes), **Kính** (5) and **Áo** (7 + Bộ Phi Công).
 - **Second complaint:** the painted Gamma hats still looked like "2 mảng assets đè lên nhau" (front-view sprite, too big, no wrap, different ink). Hats and glasses are now drawn in code (`public/js/outfit-art.js`) on each pilot's measured head: 3/4 band ellipses, a back layer behind the head, the pilot's ink width, and glasses on the two measured eyes with an arm to the ear.
 - **Items** (`shared/outfits.js`):
   - Mũ: Nón Lá, Vương Miện, Mũ Phù Thuỷ, Mũ Cướp Biển, Mũ Len Tai Mèo.
