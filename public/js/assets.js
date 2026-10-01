@@ -185,7 +185,7 @@ const XE_SHEETS = [
 ];
 // Base pilots (2026-10-01): plain hair, bare face, white tee, both hands on a gamepad (painted in, so the hands hold
 // something real: user "cánh tay như đưa vào không khí"), so outfits fit like Gunbound's avatars.
-const PILOT_SHEET = { src: '/assets/sheets/pilot-base.jpg', order: ['m', 'f', 'm2', 'f2'], holes: true, view: [1400, 781],
+const PILOT_SHEET = { src: '/assets/sheets/pilot-pad.jpg', order: ['m', 'f', 'm2', 'f2'], holes: true, view: [1400, 781],
   boxes: { m: [42, 145, 360, 665], f: [378, 140, 694, 665], m2: [698, 135, 1008, 665], f2: [1012, 170, 1392, 665] } };
 // the first pilots (aviator cap, goggles, jackets) live on as the "Bộ Phi Công" outfit
 const PILOT_CLASSIC_SHEET = { src: '/assets/sheets/pilot.jpg', rows: 1, order: ['m', 'f', 'm2', 'f2'] };

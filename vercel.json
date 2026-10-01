@@ -5,6 +5,6 @@
   "outputDirectory": "dist",
   "functions": { "api/**/*.js": { "maxDuration": 10 } },
   "headers": [
-    { "source": "/assets/(.*)", "headers": [{ "key": "Cache-Control", "value": "public, max-age=86400" }] }
+    { "source": "/assets/(.*)", "headers": [{ "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }] }
   ]
 }
