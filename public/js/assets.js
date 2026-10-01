@@ -11,7 +11,7 @@ const PILOT_GREEN = { m: false, f: true };
 // and the pilot's height relative to the animal.
 export const SEATS = {
   rong: [0.5, 0.5, 0.5], kylan: [0.4, 0.5, 0.5], kimquy: [0.28, 0.16, 0.44], phuong: [0.48, 0.38, 0.42],
-  voi: [0.47, 0.44, 0.42], bachtuoc: [0.74, 0.36, 0.42], bocap: [0.47, 0.45, 0.42], cu: [0.5, 0.16, 0.44],
+  voi: [0.52, 0.37, 0.4], bachtuoc: [0.74, 0.36, 0.42], bocap: [0.47, 0.45, 0.42], cu: [0.5, 0.16, 0.44],
   camap: [0.44, 0.26, 0.52], tethien: [0.3, 0.37, 0.4],
   gau: [0.38, 0.36, 0.5], canhcut: [0.36, 0.2, 0.55], tho: [0.43, 0.5, 0.44],
 };
@@ -31,7 +31,8 @@ export const OCCLUDE = {
   kylan: [[0.26, 0.49], [0.56, 0.49], [0.56, 0.72], [0.26, 0.72]],
   kimquy: [[0.1, 0.17], [0.62, 0.14], [0.62, 0.26], [0.1, 0.3]],
   phuong: [[0.38, 0.38], [0.62, 0.38], [0.62, 0.62], [0.38, 0.62]],
-  voi: [[0.22, 0.46], [0.64, 0.46], [0.64, 0.78], [0.22, 0.78]],
+  // the lava mammoth's shaggy head fur hides the pilot's legs
+  voi: [[0.4, 0.37], [0.74, 0.37], [0.74, 0.62], [0.4, 0.62]],
   bachtuoc: [[0.6, 0.32], [0.98, 0.3], [0.98, 0.52], [0.6, 0.56]],
   bocap: [[0.26, 0.42], [0.56, 0.42], [0.56, 0.52], [0.26, 0.52]],
   cu: [[0.46, 0.16], [0.72, 0.16], [0.72, 0.48], [0.46, 0.48]],
@@ -315,6 +316,10 @@ const XE2_SHEET = { src: '/assets/sheets/xe2.jpg', view: [1400, 781], order: ['g
 // saddle on its back). Its captions sit below the boxes.
 const XE3_SHEET = { src: '/assets/sheets/xe3.jpg', view: [1400, 781], order: ['tho', 'gau'], holes: true,
   boxes: { tho: [30, 150, 495, 565], gau: [955, 125, 1372, 600] } };
+// Tượng Tinh redesigned (2026-10-01) as a volcano-backed lava mammoth; the sheet (art-src/mammoth-v3) was painted
+// facing left and is stored mirrored. Only the right-hand figure is used.
+const XE6_SHEET = { src: '/assets/sheets/xe6.jpg', view: [1400, 781], order: ['voi'], holes: true,
+  boxes: { voi: [962, 128, 1372, 656] } };
 const mirror = c => { const m = document.createElement('canvas'); m.width = c.width; m.height = c.height; const x = m.getContext('2d'); x.translate(c.width, 0); x.scale(-1, 1); x.drawImage(c, 0, 0); return m; };
 
 // Graphics review 2026-10-01: sprites that didn't match their shot were redrawn on two grid sheets.
@@ -335,6 +340,13 @@ function bronze(src) {
   return c;
 }
 
+// recoloured copy of a sprite through a canvas filter (the lava mammoth reuses the old elephant's rock and water ball)
+function tinted(src, filter) {
+  const c = document.createElement('canvas'); c.width = src.width; c.height = src.height;
+  const x = c.getContext('2d'); x.filter = filter; x.drawImage(src, 0, 0);
+  return c;
+}
+
 async function loadProjectiles() {
   await Promise.all(PROJ_GRIDS.map(async sh => {
     const img = await loadImg(sh.src);
@@ -347,6 +359,11 @@ async function loadProjectiles() {
   }));
   ASSETS.projNew = {};
   if (ASSETS.proj.kimquy) { ASSETS.proj.kimquy.s1 = bronze(ASSETS.proj.kimquy.ss); unPink(ASSETS.proj.kimquy.s2); }
+  if (ASSETS.proj.voi) {
+    // molten rock from the volcano, a magma blob from the tusk
+    ASSETS.proj.voi.s1 = tinted(ASSETS.proj.voi.s1, 'sepia(1) saturate(4) hue-rotate(-28deg) brightness(0.9) contrast(1.25)');
+    ASSETS.proj.voi.s2 = tinted(ASSETS.proj.voi.s2, 'hue-rotate(180deg) saturate(2.2) brightness(1.05)');
+  }
   await Promise.all(PROJ_FIXES.map(async sh => {
     const img = await loadImg(sh.src);
     if (!img) return;
@@ -739,7 +756,6 @@ export const RIGS = {
     { name: 'wingL', pivot: [0.47, 0.5], poly: [[0.47, 0.52], [0.4, 0.35], [0.32, 0.18], [0.16, 0.03], [0.09, 0.15], [0.1, 0.3], [0.2, 0.45], [0.3, 0.58], [0.4, 0.62], [0.47, 0.6]] },
     { name: 'wingR', pivot: [0.66, 0.5], poly: [[0.64, 0.52], [0.7, 0.3], [0.78, 0.15], [0.97, 0.02], [0.98, 0.3], [0.92, 0.45], [0.82, 0.56], [0.72, 0.6], [0.65, 0.58]] },
   ],
-  voi: [{ name: 'trunk', pivot: [0.7, 0.63], poly: [[0.68, 0.6], [0.72, 0.59], [0.74, 0.52], [0.77, 0.44], [0.8, 0.4], [0.84, 0.37], [0.9, 0.33], [0.95, 0.31], [0.995, 0.33], [0.995, 0.37], [0.93, 0.39], [0.87, 0.42], [0.84, 0.46], [0.81, 0.53], [0.8, 0.6], [0.77, 0.66], [0.72, 0.69], [0.68, 0.68]] }],
   bocap: [{ name: 'tail', pivot: [0.17, 0.45], poly: [[0.19, 0.46], [0.12, 0.42], [0.07, 0.34], [0.04, 0.24], [0.05, 0.14], [0.1, 0.06], [0.18, 0.02], [0.27, 0.02], [0.33, 0.05], [0.4, 0.07], [0.44, 0.14], [0.5, 0.2], [0.44, 0.27], [0.36, 0.27], [0.3, 0.2], [0.26, 0.14], [0.2, 0.1], [0.14, 0.13], [0.11, 0.2], [0.13, 0.3], [0.17, 0.37], [0.22, 0.4]] }],
   cu: [
     { name: 'wingL', pivot: [0.42, 0.45], poly: [[0.44, 0.52], [0.38, 0.34], [0.3, 0.24], [0.18, 0.1], [0.01, 0.0], [0.0, 0.18], [0.02, 0.32], [0.06, 0.44], [0.14, 0.53], [0.24, 0.6], [0.34, 0.63], [0.42, 0.62]] },
@@ -802,7 +818,7 @@ let loading = null;
 export function loadAssets() { return (loading ||= loadAll()); }
 
 async function loadAll() {
-  const [xeA, xeB, pilotSheet, xe2, xe3, classic] = await Promise.all([...XE_SHEETS.map(sh => loadSheet(sh)), loadSheet(PILOT_SHEET), loadSheet(XE2_SHEET, true), loadSheet(XE3_SHEET, true), loadSheet(PILOT_CLASSIC_SHEET), loadProjectiles(), loadIcons(), loadOutfits()]);
+  const [xeA, xeB, pilotSheet, xe2, xe3, classic, xe6] = await Promise.all([...XE_SHEETS.map(sh => loadSheet(sh)), loadSheet(PILOT_SHEET), loadSheet(XE2_SHEET, true), loadSheet(XE3_SHEET, true), loadSheet(PILOT_CLASSIC_SHEET), loadSheet(XE6_SHEET), loadProjectiles(), loadIcons(), loadOutfits()]);
   if (classic) Object.assign(ASSETS.pilotClassic, classic);
   const xeSheet = xeA && xeB;
   if (xeA) Object.assign(ASSETS.xe, xeA);
@@ -810,6 +826,7 @@ async function loadAll() {
   // the three newer xe (2026-10-01): the penguin was painted facing left, so mirror it
   if (xe2) for (const [id, c] of Object.entries(xe2)) ASSETS.xe[id] = XE2_SHEET.flip.includes(id) ? mirror(c) : c;
   if (xe3) Object.assign(ASSETS.xe, xe3);
+  if (xe6) Object.assign(ASSETS.xe, xe6);
   if (pilotSheet) Object.assign(ASSETS.pilot, pilotSheet);
   const jobs = [
     ...(pilotSheet ? [] : ['m', 'f']).map(async g => {

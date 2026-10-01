@@ -90,15 +90,15 @@ export const XE_LIST = [
     },
   },
   {
-    id: 'voi', name: 'Tượng Tinh', title: 'Voi Chiến', animal: 'Voi', role: 'Phá địa hình · Đẩy văng',
-    colors: ['#8a8f99', '#b87333'], hp: 1250, armor: 0.20, angle: [20, 70], windMul: 0.8,
+    id: 'voi', name: 'Tượng Tinh', title: 'Ma Mút Núi Lửa', animal: 'Ma Mút', role: 'Phá địa hình · Đẩy văng',
+    colors: ['#3a3a42', '#ff7a1a'], hp: 1250, armor: 0.20, angle: [20, 70], windMul: 0.8,
     rating: { congPha: 7, doBen: 9, coDong: 4 }, move: 130,
     passive: 'heavy', passiveName: 'Thân Nặng', passiveDesc: 'Không bị đẩy, kéo hay hất văng bởi bất kỳ đòn nào.',
-    desc: 'Hai nòng như Ice của Gunbound: tháp trên lưng phá đất, vòi phun nước hất văng.',
+    desc: 'Ma mút đá bazan cõng núi lửa trên lưng. Hai nòng như Ice của Gunbound: miệng núi lửa phá đất, ngà dung nham hất văng.',
     shots: {
-      s1: { name: 'Pháo Tháp', desc: 'Bắn từ tháp trên lưng (điểm bắn cao): đạn đá nặng, phá đất rộng, đẩy nhẹ.', delay: 820, dmg: 250, r: 40, look: 'rock', carveMul: 1.4, push: 40, muzzle: { dx: -16, dy: -4 } },
-      s2: { name: 'Vòi Rồng', desc: 'Bắn từ vòi (điểm bắn thấp, dễ vướng vách): khối nước đẩy văng rất xa.', delay: 860, dmg: 150, r: 40, look: 'water', push: 130, muzzle: { dx: 12, dy: 11 } },
-      ss: { name: 'Voi Dậm', desc: 'Sóng chấn động chạy dọc mặt đất hai bên, hất bật mọi xe trên đường.', delay: 1150, dmg: 250, r: 50, look: 'rock', quake: { dmg: 130, r: 26, range: 320, every: 45, push: 70 } },
+      s1: { name: 'Núi Lửa Phun', desc: 'Phun từ miệng núi lửa trên lưng (điểm bắn cao): đá nóng chảy nặng, phá đất rộng, đẩy nhẹ.', delay: 820, dmg: 250, r: 40, look: 'lavarock', carveMul: 1.4, push: 40, muzzle: { dx: -28, dy: 0 } },
+      s2: { name: 'Ngà Dung Nham', desc: 'Bắn từ đầu ngà rực lửa (điểm bắn thấp, dễ vướng vách): khối dung nham đẩy văng rất xa.', delay: 860, dmg: 150, r: 40, look: 'magma', push: 130, muzzle: { dx: 1, dy: 26 } },
+      ss: { name: 'Voi Dậm', desc: 'Dậm chân làm đất nứt: sóng chấn động chạy dọc mặt đất hai bên, hất bật mọi xe trên đường.', delay: 1150, dmg: 250, r: 50, look: 'rock', quake: { dmg: 130, r: 26, range: 320, every: 45, push: 70 } },
     },
   },
   {

@@ -1503,8 +1503,8 @@ export class Game {
     }
   }
 
-  // Firing: every animal does its own thing at its own body part (the dragon breathes fire, the elephant
-  // sprays from its trunk, the scorpion flicks venom), on top of the barrel flash.
+  // Firing: every animal does its own thing at its own body part (the dragon breathes fire, the mammoth's
+  // volcano erupts, the scorpion flicks venom), on top of the barrel flash.
   signatureFire(t, shot) {
     const f = t.facing || 1, at = part => partWorld(t.xe, t.gender, part, t.dx, t.dy, f);
     const burst = (x, y, n, cols, sp, spread, life, r, g = 0, dir = 0) => {
@@ -1518,7 +1518,7 @@ export class Game {
       case 'kylan': { const [x, y] = at('horn'); this.fx.add({ x, y, ring: true, life: 18, max: 18, r: 6, grow: 3, color: '#ffffff' }); burst(x, y, 12, ['#ffffff', '#d8c8ff', '#ffe0f0'], 2.5, 6.3, 20, 2.5); break; }
       case 'kimquy': { const [x, y] = at('shell'); this.fx.add({ x, y, ring: true, life: 20, max: 20, r: 20, grow: 2.5, color: '#ffe16a' }); break; }
       case 'phuong': { const [x, y] = at('wingL'), [x2, y2] = at('wingR'); burst(x, y, 10, ['#fff3a0', '#ffb030'], 2.5, 2, 26, 3, 0.03, -1.6); burst(x2, y2, 10, ['#fff3a0', '#ffb030'], 2.5, 2, 26, 3, 0.03, -1.6); break; }
-      case 'voi': { const [x, y] = at('trunk'); if (shot === 's2' || shot === 'ss') burst(x, y, 22, ['#e0f6ff', '#8fd4ff', '#4aa8ff'], 5, 0.5, 20, 3.5, 0.18, -0.3); else burst(x, y, 6, ['#bfe8ff'], 2, 1, 16, 2, 0.15, -0.5); break; }
+      case 'voi': { const [x, y] = at(shot === 's1' ? 'tower' : 'trunk'); if (shot === 's1') burst(x, y, 26, ['#fff0a0', '#ff9a2a', '#ff5a10', '#5a5258'], 5, 0.9, 24, 3.5, 0.2, -1.25); else burst(x, y, 18, ['#ffe07a', '#ff8a2a', '#ff5a10'], 4, 0.6, 18, 3, 0.18, -0.3); break; }
       case 'bachtuoc': { const [x, y] = at('bell'); burst(x, y, 12, ['#3a1450', '#8e44ad', '#b765d8'], 3.5, 1.2, 24, 5, 0.1, -0.4); break; }
       case 'bocap': { const [x, y] = at('sting'); burst(x, y, 14, ['#b6ffcf', '#39e07a', '#1d6b3a'], 4, 0.6, 20, 3, 0.12, 0.1); break; }
       case 'cu': { const [x, y] = at('eyeL'); burst(x, y + 20, 8, ['#c8a070', '#8a5a30', '#fff4d0'], 1.8, 3, 40, 3.5, 0.04, -1.2); break; }

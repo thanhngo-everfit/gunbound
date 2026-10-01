@@ -702,7 +702,8 @@ export const XE_PARTS = {
   kylan: { horn: [0.95, 0.12], mane: [0.42, 0.2], tail: [0.12, 0.45] },
   kimquy: { shell: [0.45, 0.55], head: [0.8, 0.5], bow: [0.97, 0.15] },
   phuong: { wingL: [0.2, 0.3], wingR: [0.85, 0.28], tail: [0.15, 0.85], orb: [0.72, 0.8] },
-  voi: { trunk: [0.97, 0.35], tower: [0.54, 0.12] },
+  // the lava mammoth (xe6): 'trunk' is the glowing tusk tip it fires from, 'tower' the volcano crater
+  voi: { trunk: [0.95, 0.66], tower: [0.3, 0.15] },
   bachtuoc: { bell: [0.98, 0.42] },
   bocap: { sting: [0.36, 0.14] },
   cu: { eyeL: [0.56, 0.36], eyeR: [0.66, 0.36], scope: [0.97, 0.12] },
@@ -783,14 +784,22 @@ export function drawXeFx(ctx, xe, x0, y0, w, h, t, moves = null) {
       ctx.beginPath(); ctx.arc(ex + Math.sin(k * 9 + i * 2) * 3 * u, ey - k * 22 * u, (1.6 - k) * u, 0, Math.PI * 2); ctx.fill();
     }
   } else if (xe === 'voi') {
-    // every 3.5 s the trunk flicks out a little spray
-    const [tx, ty] = P('trunk'), c = frac(t / 3.5);
-    if (c < 0.35) for (let i = 0; i < 7; i++) {
-      const k = Math.min(1, c / 0.35 + i * 0.04), a = -0.9 + i * 0.12;
-      const px = tx + Math.cos(a) * k * 18 * u, py = ty + Math.sin(a) * k * 18 * u + k * k * 12 * u;
-      ctx.globalAlpha = 1 - k * 0.7; ctx.fillStyle = i % 2 ? '#bfe8ff' : '#6fc8ff';
-      ctx.beginPath(); ctx.arc(px, py, 1.4 * u, 0, Math.PI * 2); ctx.fill();
+    // the volcano on its back smokes and spits embers; the lava tusk tip flickers
+    const [cx, cy] = P('tower'), [tx, ty] = P('trunk');
+    for (let i = 0; i < 4; i++) {
+      const k = frac(t * 0.35 + i / 4);
+      ctx.globalAlpha = (1 - k) * 0.45; ctx.fillStyle = '#5a5258';
+      ctx.beginPath(); ctx.arc(cx + Math.sin(k * 5 + i) * 4 * u - k * 6 * u, cy - k * 26 * u, (2.5 + k * 5) * u, 0, Math.PI * 2); ctx.fill();
     }
+    for (let i = 0; i < 6; i++) {
+      const k = frac(t * 0.9 + i / 6), side = i % 2 ? 1 : -1;
+      ctx.globalAlpha = 1 - k; ctx.fillStyle = k < 0.4 ? '#ffe07a' : '#ff6a1a';
+      ctx.beginPath(); ctx.arc(cx + side * k * (5 + i) * u, cy - Math.sin(k * Math.PI) * 14 * u + k * 6 * u, (1.3 - k * 0.6) * u, 0, Math.PI * 2); ctx.fill();
+    }
+    const fl = 0.6 + 0.4 * Math.sin(t * 9) * Math.sin(t * 5.3);
+    const g = ctx.createRadialGradient(tx, ty, 0, tx, ty, 6 * u);
+    g.addColorStop(0, `rgba(255,220,120,${0.7 * fl})`); g.addColorStop(1, 'rgba(255,90,20,0)');
+    ctx.globalAlpha = 1; ctx.fillStyle = g; ctx.beginPath(); ctx.arc(tx, ty, 6 * u, 0, Math.PI * 2); ctx.fill();
   } else if (xe === 'bachtuoc') {
     const [bx, by] = P('bell');
     // ink drips from the bottle's mouth
@@ -963,6 +972,8 @@ export const LOOKS = {
   phoenix: { c: '#fff3a0', g: '#ff5a1a', r: 12, trail: '#ff7a1a', shape: 'bird', boom: ['#ffffff', '#ffd23a', '#ff5a10', '#a01a00'] },
   tusk: { c: '#fffbea', g: '#c8b890', r: 5, trail: '#d8d0b8', shape: 'dart', boom: ['#fffbea', '#d8b890', '#8a6a4a', '#4a3a2a'] },
   water: { c: '#e0f8ff', g: '#3aa8ff', r: 7, trail: '#6fc8ff', boom: ['#ffffff', '#b0e8ff', '#5ac8ff', '#1a6ad8'] },
+  lavarock: { c: '#ffb040', g: '#3a2a26', r: 8, trail: '#ff6a1a', boom: ['#fff0a0', '#ff9a2a', '#c8400a', '#3a2a26'] },
+  magma: { c: '#ffe07a', g: '#ff5a10', r: 7, trail: '#ff8a2a', boom: ['#fff3a0', '#ffb030', '#ff5a10', '#8a2a00'] },
   rock: { c: '#b0a090', g: '#6a5a4a', r: 8, trail: '#8a7a6a', boom: ['#e0d0b0', '#a08a6a', '#6a5a4a', '#3a2e24'] },
   quake: { c: '#b0a090', g: '#6a5a4a', r: 0, trail: '#8a7a6a' },
   ink: { c: '#3a1450', g: '#8e44ad', r: 7, trail: '#2a0a3a', boom: ['#b765d8', '#8e44ad', '#3a1450', '#10001a'] },

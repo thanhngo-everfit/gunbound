@@ -126,7 +126,7 @@ The balance rule was congPha + doBen + coDong = 20 (ratings 1–10). Exact numbe
 | kylan | Straight beam + heal | Tia Sừng: tracer (passes xe), horn beam to the point, stopped by ground/foe, heals allies on the line | Hào Quang: allies +180 and cleanse, foes 90, r70 | Thánh Quang: wide beam through everything, 260 to foes in the band, +150 allies | Thánh Thể: at its turn start, allies within 120px +30 HP. Never hurts allies |
 | kimquy | Pierce xe (Nỏ Thần) | Tên Đồng: arrow through every xe (×0.7 each next), ground ends it | Rụt Mai: same arrow + 120 Giáp ảo + allies ±90px +20% armour | Vạn Tiễn: 5-arrow fan (4° apart), each pierces xe | Mai Thần: Giáp ảo 300, +60/turn |
 | phuong | Rebirth | Lông Phượng Lửa (was Tro Tàn): blast, then a firebird hops forward and blasts (110) | Phượng Non (was Lửa Tàn Lan): two hops, forward and back (90 each) | Niết Bàn: 300, then a chain of 3 growing hops (120/150/180) | Tái Sinh: revive once at 25% |
-| voi | Push + two barrels | Pháo Tháp: from the tower (muzzle −20 px), carve ×1.4, push 40 | Vòi Rồng: from the trunk (muzzle +26/+24), push 130 | Voi Dậm: quake pulses both ways with push 70 | Thân Nặng: cannot be pushed or pulled |
+| voi | Push + two barrels | Núi Lửa Phun: from the volcano crater on its back (muzzle −28/0), carve ×1.4, push 40 | Ngà Dung Nham: from the glowing tusk tip (muzzle +1/+26), push 130 | Voi Dậm: quake pulses both ways with push 70 | Thân Nặng: cannot be pushed or pulled |
 | bachtuoc | Blind + root | Mực Đen: blind 1 turn | Xúc Tu Trói: rooted, no movement on its next turn | Kraken: all foes within 140px blind + rooted | Ẩn Mực: under 30% HP, hidden from the other team (faint, no label, off minimap) |
 | bocap | Poison + minions | Nọc Độc: 40×3 | Ổ Bọ Con: fires 3 separate babies in a fan (no blast on landing). Each is drawn in code (`art.js drawBabyScorpion`: fly / idle / walk / sting) with a pulsing trap ring. They sit out one full turn (visible, dodgeable), then each walks ALONG THE GROUND (`crawlPath`: climbs ≤10 px/step, falls ≤60 px, ≤250 px) to the nearest foe and stings (70 + 30×2) only if it reaches it; they stay up to 3 rounds | Bọ Cạp Tử Thần (was Đuôi Tử Thần): armour-piercing 80×3 that spreads to a clean neighbour (≤80px) each turn | Gai Độc: whoever hits it from ≤300px gets 25×2 poison |
 | cu | Mark + homing | Lông Vũ: wind ×0.7 (×0.49 total) | Mắt Đêm: team mark +30% for one round | Cú Săn Mồi: on the descent homes onto a marked foe within 350px | Mắt Cú: sees the first ~40 frames of its shot's path while aiming |
@@ -146,7 +146,7 @@ The balance rule was congPha + doBen + coDong = 20 (ratings 1–10). Exact numbe
 | Long Vương | Rồng Lửa | Tây Du Ký: the Four Seas Dragon Kings |
 | Sa Đệ | Cá Mập Cát | Tây Du Ký: Sa Tăng, "sư đệ" from Lưu Sa Hà (the flowing-sand river); Hán-Việt "sa ngư" is shark |
 | Bọ Cạp Tinh | Bọ Cạp | Tây Du Ký: the scorpion demon |
-| Tượng Tinh | Voi Chiến | Tây Du Ký: Bạch Tượng Tinh of Sư Đà Lĩnh |
+| Tượng Tinh | Ma Mút Núi Lửa | Tây Du Ký: Bạch Tượng Tinh of Sư Đà Lĩnh |
 | Quy Lão | Kim Quy | Dragon Ball: Quy lão Kame |
 | Phượng Tỷ | Phượng Hoàng | Hồng Lâu Mộng: Vương Hy Phượng |
 | Bạch Tuộc Paul | Bạch Tuộc | the World Cup 2010 "prophet" octopus |
@@ -171,7 +171,7 @@ User request 2026-10-01: like Gunbound's Dragon/Knight, some xe can't be picked 
 - Kỳ Lân: jade qilin on cloud puffs, crystal horn beam, lotus saddle.
 - Kim Quy: golden turtle whose shell is the Cổ Loa spiral citadel, magic crossbow on top.
 - Phượng: white-gold phoenix holding an ember orb, nest saddle.
-- Voi: war elephant with a pagoda cannon (high barrel) and a brass trunk nozzle (low barrel).
+- Voi: redesigned 2026-10-01 as a basalt lava mammoth carrying a smoking volcano (crater = high barrel; glowing tusk tip = low barrel). User: the war elephant was "xấu quá, không có gì đặc biệt", and a realistic woolly mammoth was rejected too ("cần phá cách"). Shots are lava-tinted copies of the old rock and water ball.
 - Bạch Tuộc: sleepy captain octopus pouring an ink bottle.
 - Bọ Cạp: emerald scorpion with a venom-bulb tail and a nest of babies on its back.
 - Cú: starry night owl with a monocle and a brass telescope rifle.
