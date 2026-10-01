@@ -6,7 +6,7 @@ import { Game, esc, shotDmgText } from './game.js';
 import { loadAssets, ASSETS, xeSprite, drawSmooth, iconUrl, rankIcon, pilotImage } from './assets.js';
 import { RANK_LIST, DRAGON_MIN_GAMES } from '/shared/ranks.js';
 import { createSocket } from './net.js';
-import { parseLook, lookString, cleanLook, ITEMS, SLOTS, PILOTS, PILOT_NAMES } from '/shared/outfits.js';
+import { parseLook, lookString, cleanLook, ITEMS, SLOTS, PILOTS, PILOT_NAMES, KEEP_HAIR } from '/shared/outfits.js';
 
 const $ = id => document.getElementById(id);
 const socket = await createSocket();
@@ -133,23 +133,24 @@ function renderWardrobe() {
   $('wd-pilots').innerHTML = PILOTS.map(id => `<button type="button" data-p="${id}" class="${draft.pilot === id ? 'on' : ''}"><canvas width="56" height="56"></canvas>${PILOT_NAMES[id]}</button>`).join('');
   for (const b of $('wd-pilots').children) {
     thumb(b.querySelector('canvas'), ASSETS.pilot[b.dataset.p], 1);
-    b.onclick = () => { draft.pilot = b.dataset.p; renderWardrobe(); };
+    b.onclick = () => { draft = parseLook(lookString({ ...draft, pilot: b.dataset.p })); renderWardrobe(); };
   }
   $('wd-tabs').innerHTML = SLOTS.map(s => `<button type="button" data-t="${s.key}" class="${wdTab === s.key ? 'on' : ''}">${s.icon} ${s.name}</button>`).join('');
   for (const b of $('wd-tabs').children) b.onclick = () => { wdTab = b.dataset.t; renderWardrobe(); };
-  const items = [{ n: 0, name: 'Không đeo' }, ...ITEMS[wdTab]];
+  // Nữ 2 keeps her twin tails (they hang over her arms), so only her hair colour changes
+  const items = [{ n: 0, name: { h: 'Tóc gốc', c: 'Màu gốc', g: 'Không đeo', s: 'Áo trắng' }[wdTab] }, ...ITEMS[wdTab].filter(it => !(wdTab === 'h' && (KEEP_HAIR.has(draft.pilot) || it.pilot === draft.pilot)))];
   $('wd-items').innerHTML = items.map(it => `<button type="button" data-n="${it.n}" class="${draft[wdTab] === it.n ? 'on' : ''}"><canvas width="88" height="72"></canvas><span>${it.name}</span></button>`).join('');
   const classic = ITEMS.s.find(it => it.classic)?.n;
   for (const b of $('wd-items').children) {
     const n = Number(b.dataset.n);
     // tops are painted into the tee, so their thumbnail is the pilot wearing them
     // every thumbnail is the pilot wearing the item (hats and glasses zoomed on the head)
-    if (n) itemThumb(b.querySelector('canvas'), pilotImage(`${draft.pilot}.${wdTab}${n}`), wdTab !== 's');
+    if (n) itemThumb(b.querySelector('canvas'), pilotImage(`${draft.pilot}.${wdTab}${n}${wdTab === 'c' && draft.h ? `.h${draft.h}` : ''}`), wdTab !== 's');
     else { const c = b.querySelector('canvas').getContext('2d'); c.font = '34px sans-serif'; c.textAlign = 'center'; c.fillText('🚫', 44, 48); }
     b.onclick = () => {
       draft[wdTab] = n;
       // the classic aviator set comes with its own cap and goggles
-      if (wdTab === 's' && n === classic) draft.h = draft.g = 0;
+      if (wdTab === 's' && n === classic) draft.h = draft.c = draft.g = 0;
       if (wdTab !== 's' && n && draft.s === classic) draft.s = 0;
       renderWardrobe();
     };
@@ -159,7 +160,7 @@ $('wardrobe-open').onclick = openWardrobe;
 $('wardrobe-open-room').onclick = openWardrobe;
 $('wardrobe-close').onclick = closeWardrobe;
 $('wardrobe-modal').onclick = e => { if (e.target.id === 'wardrobe-modal') closeWardrobe(); };
-$('wd-reset').onclick = () => { draft = { pilot: draft.pilot, h: 0, g: 0, s: 0 }; renderWardrobe(); };
+$('wd-reset').onclick = () => { draft = { pilot: draft.pilot, h: 0, c: 0, g: 0, s: 0 }; renderWardrobe(); };
 $('wd-save').onclick = () => { setLook(lookString(draft)); closeWardrobe(); };
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeWardrobe(); });
 

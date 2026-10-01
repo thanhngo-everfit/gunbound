@@ -2,7 +2,7 @@
 import { XE_LIST } from '/shared/xe.js';
 import { MAP_IDS, registerMask } from '/shared/physics.js';
 import { parseLook, ITEMS } from '/shared/outfits.js';
-import { drawHat, drawGlasses } from './outfit-art.js';
+import { drawGlasses } from './outfit-art.js';
 
 const GREEN_BG = new Set(['bachtuoc', 'tethien', 'phuong']);
 const PILOT_GREEN = { m: false, f: true };
@@ -507,12 +507,149 @@ function paintTop(base, fit, n) {
 // The base pilot wearing the items in a look string ("f2.h3.g1"). The canvas is padded for hats and capes;
 // baseW/baseH and padL/padT say where the pilot itself sits so riders stay the same size.
 const dressed = new Map();
+// ---------- hair: each base pilot's hairstyle is a separable layer (Gunbound's "Head" items) ----------
+// Hair pixels are found by colour (the four pilots came from one Gamma image, so their hair, ink and shading match),
+// plus the ink outline around them; the eyes/brows box is never touched.
+const HAIR_KIND = { m: 'brown', f: 'brown', m2: 'orange', f2: 'pink' };
+function hsv(r, g, b) {
+  const mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn;
+  let h = 0;
+  if (d) h = mx === r ? ((g - b) / d) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4;
+  return [(h * 60 + 360) % 360, mx ? d / mx : 0, mx / 255];
+}
+const IS_HAIR = {
+  brown: (h, s, v) => h >= 5 && h <= 40 && s > 0.35 && v > 0.12 && v < 0.75,
+  orange: (h, s, v) => h >= 8 && h <= 42 && s > 0.62 && v > 0.55,
+  pink: (h, s, v) => (h >= 295 || h <= 6) && s > 0.2 && v > 0.5,
+};
+const hairCache = new Map();
+// { mask (0..1 per pixel, hair incl. its outline), front (pixel is over the head, not behind the body) }
+function hairOf(id) {
+  if (hairCache.has(id)) return hairCache.get(id);
+  const base = ASSETS.pilot[id], fit = PILOT_FIT[id], W = base.width, H = base.height;
+  const c = document.createElement('canvas'); c.width = W; c.height = H;
+  const x = c.getContext('2d', { willReadFrequently: true }); x.drawImage(base, 0, 0);
+  const d = x.getImageData(0, 0, W, H).data, is = IS_HAIR[HAIR_KIND[id]];
+  const [[nx, ny], [fx]] = fit.eyes, [hx, hy, hr, ht] = fit.head;
+  // the face box: eyes, brows and cheeks stay with the face (brows are hair-coloured)
+  // brows and eyes across the face, the cheeks (blush is pink too) a little narrower so side locks still count as hair
+  const inFace = (px, py) => (py > (ny - 0.085) * H && py < (ny + 0.05) * H && px > (nx - 0.08) * W && px < (fx + 0.05) * W)
+    || (py >= (ny + 0.05) * H && py < (ny + 0.14) * H && px > (nx - 0.06) * W && px < (fx + 0.025) * W);
+  const hair = new Uint8Array(W * H);
+  // hair lives above the chin, except twin tails that hang beside the body
+  const chin = (ny + 0.12) * H, tails = id === 'f2' ? 0.88 * H : 0;
+  const inZone = (px, py) => py < chin || (py < tails && (px < 0.4 * W || px > 0.66 * W));
+  for (let py = 0; py < H * 0.82; py++) for (let px = 0; px < W; px++) {
+    const i = py * W + px, j = i * 4;
+    if (d[j + 3] < 160 || inFace(px, py) || !inZone(px, py)) continue;
+    const [h, sat, v] = hsv(d[j], d[j + 1], d[j + 2]);
+    // dark shading and ink on top of the skull belong to the hair too
+    if (is(h, sat, v) || (py < (hy + 0.02) * H && v < 0.35)) hair[i] = 1;
+  }
+  // grow into the ink around the hair (so the old outline goes with it)
+  const mask = new Float32Array(W * H), R = Math.max(4, Math.round(W * 0.028));
+  for (let py = 0; py < H; py++) for (let px = 0; px < W; px++) {
+    const i = py * W + px, j = i * 4;
+    if (hair[i]) { mask[i] = 1; continue; }
+    if (d[j + 3] < 40 || inFace(px, py) || !inZone(px, py)) continue;
+    const lum = (d[j] + d[j + 1] + d[j + 2]) / 3;
+    if (lum > 150) continue;
+    let near = false;
+    for (let oy = -R; oy <= R && !near; oy++) for (let ox = -R; ox <= R; ox++) { const q = (py + oy) * W + px + ox; if (q >= 0 && q < W * H && hair[q]) { near = true; break; } }
+    if (near) mask[i] = 1;
+  }
+  // over the head (bangs, crown, spikes) vs. hanging behind the body (bun sides, pigtails)
+  const front = new Uint8Array(W * H), skullCy = (ht * H + hy * H) / 2 + hr * W * 0.25;
+  for (let py = 0; py < H; py++) for (let px = 0; px < W; px++) {
+    const dx = (px - hx * W) / (hr * W * 1.1), dy = (py - skullCy) / (hr * W * 1.25);
+    if (dx * dx + dy * dy < 1 || py < hy * H) front[py * W + px] = 1;
+  }
+  // the hair's typical brightness, for dyeing
+  let vs = 0, vn = 0; const col = [0, 0, 0];
+  for (let i = 0; i < W * H; i++) if (hair[i]) { vs += Math.max(d[i * 4], d[i * 4 + 1], d[i * 4 + 2]) / 255; vn++; for (let q = 0; q < 3; q++) col[q] += d[i * 4 + q]; }
+  const out = { mask, front, W, H, cx: hx * W, by: hy * H, rx: hr * W, img: base, tone: vn ? vs / vn : 0.5, color: col.map(v => Math.round(v / Math.max(1, vn))) };
+  hairCache.set(id, out);
+  return out;
+}
+// the head without its hair: hair and its outline cleared, the skull filled with skin and re-inked
+const baldCache = new Map();
+function baldHead(id, cap) {
+  const key = id + cap.join(',');
+  if (baldCache.has(key)) return baldCache.get(key);
+  const base = ASSETS.pilot[id], fit = PILOT_FIT[id], { mask, W, H } = hairOf(id), [hx, hy, hr, ht] = fit.head;
+  const c = document.createElement('canvas'); c.width = W; c.height = H;
+  const x = c.getContext('2d', { willReadFrequently: true }); x.drawImage(base, 0, 0);
+  // skin colour, sampled on the cheek
+  const [[nx, ny]] = fit.eyes, sk = x.getImageData(Math.round((nx + 0.06) * W), Math.round((ny + 0.08) * H), 1, 1).data;
+  const im = x.getImageData(0, 0, W, H), d = im.data;
+  for (let i = 0; i < W * H; i++) if (mask[i]) d[i * 4 + 3] = Math.round(d[i * 4 + 3] * (1 - mask[i]));
+  // crumbs of the old outline left floating around where the hair was: dark pixels with almost nothing around them
+  const chinY = (ny + 0.12) * H;
+  for (let pass = 0; pass < 2; pass++) for (let py = 2; py < Math.min(H - 2, H * 0.9); py++) for (let px = 2; px < W - 2; px++) {
+    const i = py * W + px, j = i * 4;
+    if (d[j + 3] < 40 || (d[j] + d[j + 1] + d[j + 2]) / 3 > 110 || (py > chinY && px > 0.36 * W && px < 0.72 * W)) continue;
+    let n = 0;
+    for (let oy = -2; oy <= 2; oy++) for (let ox = -2; ox <= 2; ox++) if (d[((py + oy) * W + px + ox) * 4 + 3] > 40) n++;
+    if (n < 10) d[j + 3] = 0;
+  }
+  x.putImageData(im, 0, 0);
+  // the scalp: an inked skin dome behind everything left of the face
+  // from the skull top down to the chin, so temples and ears under the old hair get skin too (only empty pixels are filled)
+  const chin = (ny + 0.12) * H, cx = hx * W, rx = hr * W * 0.95, cy = (ht * H + chin) / 2, ry = (chin - ht * H) / 2;
+  x.globalCompositeOperation = 'destination-over';
+  // the crown under the new hair is the new hair's colour, so wherever that hairstyle sits a little low it still reads as hair
+  x.save(); x.beginPath(); x.rect(0, 0, W, (ny - 0.075) * H); x.clip();
+  x.beginPath(); x.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2); x.fillStyle = `rgb(${cap[0]},${cap[1]},${cap[2]})`; x.fill();
+  x.restore();
+  x.beginPath(); x.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
+  x.fillStyle = `rgb(${sk[0]},${sk[1]},${sk[2]})`; x.fill();
+  // ink only the crown of the scalp; the face keeps its own outline lower down
+  x.beginPath(); x.ellipse(cx, cy, rx, ry, 0, Math.PI * 1.08, Math.PI * 1.92);
+  x.lineWidth = W * 0.012; x.strokeStyle = '#1a1410'; x.stroke();
+  x.globalCompositeOperation = 'source-over';
+  baldCache.set(key, c);
+  return c;
+}
+// a hairstyle layer, recoloured, as a canvas aligned to the target head: { back, front }
+const HAIR_COLORS = {
+  1: '#2a2422', 2: '#f2c14e', 3: '#e9ecf2', 4: '#d8343a', 5: '#3d6fe0', 6: '#8a55d6', 7: '#3fae5a', 8: '#ff8ec2',
+};
+// drawn on the padded pilot canvas (cw × ch, pilot at padL/padT) so tall hair isn't clipped at the top
+function hairLayers(srcId, targetId, color, W, H, padL, padT, cw, ch) {
+  // line the hair up by the eyes: the four faces share one pose, so eye spacing and midpoint place a head best
+  const src = hairOf(srcId), sf = PILOT_FIT[srcId], tf = PILOT_FIT[targetId];
+  const [[snx, sny], [sfx, sfy]] = sf.eyes, [[tnx, tny], [tfx, tfy]] = tf.eyes;
+  const k = ((tfx - tnx) * W) / ((sfx - snx) * src.W);
+  const ox = ((tnx + tfx) / 2) * W - ((snx + sfx) / 2) * src.W * k, oy = ((tny + tfy) / 2) * H - ((sny + sfy) / 2) * src.H * k;
+  const layer = isFront => {
+    const c = document.createElement('canvas'); c.width = src.W; c.height = src.H;
+    const x = c.getContext('2d', { willReadFrequently: true }); x.drawImage(src.img, 0, 0);
+    const im = x.getImageData(0, 0, src.W, src.H), d = im.data, tint = color && HAIR_COLORS[color] && rgb(HAIR_COLORS[color]);
+    for (let i = 0; i < src.W * src.H; i++) {
+      const m = src.mask[i];
+      if (!m || !!src.front[i] !== isFront) { d[i * 4 + 3] = 0; continue; }
+      d[i * 4 + 3] = Math.round(d[i * 4 + 3] * m);
+      if (tint) {
+        // recolour like the tops: keep the hair's own light and shade, ink stays dark
+        // brightness relative to this hair's own base tone (dark brown and pink hair both map to the dye's colour)
+        const j = i * 4, v = Math.max(d[j], d[j + 1], d[j + 2]) / 255;
+        if (v > 0.24) { const sh = Math.max(0.45, Math.min(1.2, v / src.tone)); for (let q = 0; q < 3; q++) d[j + q] = Math.min(255, tint[q] * sh); }
+      }
+    }
+    x.putImageData(im, 0, 0);
+    const out = document.createElement('canvas'); out.width = cw; out.height = ch;
+    out.getContext('2d').drawImage(c, padL + ox, padT + oy, src.W * k, src.H * k);
+    return out;
+  };
+  return { back: layer(false), front: layer(true) };
+}
+
 export function pilotImage(look) {
   const L = parseLook(look);
   // the classic aviator set is the first pilot art, cap, goggles and jacket included
   if (ITEMS.s.find(it => it.n === L.s)?.classic) return ASSETS.pilotClassic[L.pilot] || ASSETS.pilot[L.pilot];
   const base = ASSETS.pilot[L.pilot] || ASSETS.pilot.m;
-  if (!base || (!L.h && !L.g && !L.s)) return base;
+  if (!base || (!L.h && !L.c && !L.s)) return base;
   if (dressed.has(look)) return dressed.get(look);
   const fit = PILOT_FIT[L.pilot] || PILOT_FIT.m, W = base.width, H = base.height;
   const padT = Math.round(H * 0.35), padL = Math.round(W * 0.25), padR = Math.round(W * 0.1);
@@ -521,16 +658,26 @@ export function pilotImage(look) {
   const x = c.getContext('2d');
   const at = (img, cx, cy, w, baseFrac = 0.5) => { const h = (img.height / img.width) * w; x.drawImage(img, padL + cx - w / 2, padT + cy - h * baseFrac, w, h); };
   const T = L.s && TOPS[L.s];
-  // hats and glasses are drawn in code on the measured head (outfit-art.js), in the pilot's own ink width
-  const lw = W * 0.009, [hx, hy, hr, ht] = fit.head, [[nx, ny], [fx, fy], [ex, ey], lr] = fit.eyes;
-  const head = { cx: padL + hx * W, by: padT + hy * H, rx: hr * W, ry: hr * W * 0.3, top: padT + ht * H, lw };
-  const eyes = { nx: padL + nx * W, ny: padT + ny * H, fx: padL + fx * W, fy: padT + fy * H, ex: padL + ex * W, ey: padT + ey * H, r: lr * W, lw };
-  // behind the pilot: the superhero's cape and the far half of a hat's band or brim
+  // hairstyle (any pilot's hair on this head) and hair colour
+  const style = L.h ? ITEMS.h.find(it => it.n === L.h)?.pilot : null, hairSrc = style || L.pilot;
+  const hair = (style && style !== L.pilot) || L.c ? hairLayers(hairSrc, L.pilot, L.c, W, H, padL, padT, c.width, c.height) : null;
+  // behind the pilot: the superhero's cape and hair that hangs behind the body
   if (T?.cape && ASSETS.outfit.cape) { const w = W * 0.5; at(ASSETS.outfit.cape, fit.back[0] * W - w * 0.18, fit.back[1] * H - w * 0.05, w, 0); }
-  if (L.h) drawHat(x, L.h, head, 'back');
-  x.drawImage(T ? paintTop(base, fit, L.s) : base, padL, padT);
-  if (L.g) drawGlasses(x, L.g, eyes);
-  if (L.h) drawHat(x, L.h, head, 'front');
+  // another pilot's hairstyle goes on a bald copy of this head (its tails behind the body); a colour on the pilot's
+  // own hair is just painted over it in place, like the tops
+  const swap = hair && style && style !== L.pilot;
+  if (swap) x.drawImage(hair.back, 0, 0);
+  const capColor = L.c && HAIR_COLORS[L.c] ? rgb(HAIR_COLORS[L.c]).map(v => Math.round(v * 0.8)) : hairOf(hairSrc).color;
+  let body = swap ? baldHead(L.pilot, capColor) : base;
+  if (T) body = paintTop(body, fit, L.s);
+  x.drawImage(body, padL, padT);
+  if (hair && !swap) x.drawImage(hair.back, 0, 0);
+  if (hair) x.drawImage(hair.front, 0, 0);
+  // glasses are drawn in code on the measured eyes (outfit-art.js), in the pilot's own ink width
+  if (L.g) {
+    const lw = W * 0.009, [[nx, ny], [fx, fy], [ex, ey], lr] = fit.eyes;
+    drawGlasses(x, L.g, { nx: padL + nx * W, ny: padT + ny * H, fx: padL + fx * W, fy: padT + fy * H, ex: padL + ex * W, ey: padT + ey * H, r: lr * W, lw });
+  }
   Object.assign(c, { baseW: W, baseH: H, padL, padT });
   dressed.set(look, c);
   return c;
