@@ -21,7 +21,7 @@
 // start of the xe's own turn; poison, burning ground and sudden-death drain go straight to HP.
 
 // name: the nickname shown everywhere (user: "đặt tên vui", e.g. Tề Thiên → Hầu Ca). Each one borrows a name people
-// already know: Tây Du Ký (Hầu Ca, Thỏ Muội, Long Vương, Sa Đệ, Bọ Cạp Tinh, Tượng Tinh), Dragon Ball (Quy Lão),
+// already know: Tây Du Ký (Hầu Ca, Sa Đệ, Bọ Cạp Tinh, Tượng Tinh), Dragon Ball (Quy Lão),
 // Hồng Lâu Mộng (Phượng Tỷ), World Cup 2010 (Bạch Tuộc Paul), Vietnamese words (Cú Vọ, hùng ca), wuxia "-nhi"/"tiểu".
 // title: the proper name, shown under it on the xe details
 export const XE_LIST = [
@@ -31,7 +31,7 @@ export const XE_LIST = [
   // execute, mobility).
   {
     // Huyền thoại: only from a random pick (like Gunbound's Dragon); stronger than a normal xe on purpose
-    id: 'rong', name: 'Long Vương', title: 'Rồng Lửa', animal: 'Rồng', role: 'Huyền thoại · Thời gian bay', legendary: true,
+    id: 'rong', name: 'Anh Long', title: 'Rồng Lửa', animal: 'Rồng', role: 'Huyền thoại · Thời gian bay', legendary: true,
     colors: ['#d8342a', '#f2b134'], hp: 1300, armor: 0.18, angle: [10, 55], windMul: 1.0,
     rating: { congPha: 9, doBen: 7, coDong: 4 }, move: 130,
     passive: 'fury', passiveName: 'Long Nộ', passiveDesc: 'Mỗi lần mất máu, đòn kế tiếp coi như đã bay thêm 0.5 giây: lửa lớn sẵn.',
@@ -190,7 +190,7 @@ export const XE_LIST = [
   },
   {
     // Huyền thoại: the Jade Moon Rabbit, random-only, stronger on purpose
-    id: 'tho', name: 'Thỏ Muội', title: 'Thỏ Ngọc', animal: 'Thỏ Ngọc', role: 'Huyền thoại · Trọng lực', legendary: true,
+    id: 'tho', name: 'Midu', title: 'Thỏ Ngọc', animal: 'Thỏ Ngọc', role: 'Huyền thoại · Trọng lực', legendary: true,
     colors: ['#ffffff', '#ffd23a'], hp: 1100, armor: 0.12, angle: [10, 75], windMul: 0.8, gravity: 0.62,
     rating: { congPha: 8, doBen: 6, coDong: 8 },
     passive: 'luck', passiveName: 'Chân Thỏ May Mắn', passiveDesc: '20% né hẳn một đòn trúng (không mất máu).',

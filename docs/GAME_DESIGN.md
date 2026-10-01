@@ -142,8 +142,8 @@ The balance rule was congPha + doBen + coDong = 20 (ratings 1–10). Exact numbe
 | Nickname | Proper name | Where people know it from |
 |---|---|---|
 | Hầu Ca | Tề Thiên | Tây Du Ký: what Bát Giới calls Ngộ Không |
-| Thỏ Muội | Thỏ Ngọc | Tây Du Ký: Ngọc Thố tinh |
-| Long Vương | Rồng Lửa | Tây Du Ký: the Four Seas Dragon Kings |
+| Midu | Thỏ Ngọc | Chosen by the user (2026-10-01); was Thỏ Muội |
+| Anh Long | Rồng Lửa | Chosen by the user (2026-10-01); was Long Vương |
 | Sa Đệ | Cá Mập Cát | Tây Du Ký: Sa Tăng, "sư đệ" from Lưu Sa Hà (the flowing-sand river); Hán-Việt "sa ngư" is shark |
 | Bọ Cạp Tinh | Bọ Cạp | Tây Du Ký: the scorpion demon |
 | Tượng Tinh | Ma Mút Núi Lửa | Tây Du Ký: Bạch Tượng Tinh of Sư Đà Lĩnh |
