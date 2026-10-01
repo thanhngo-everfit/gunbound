@@ -65,7 +65,9 @@ User: "build server to deploy to vercel, not in my local", on free plans. Vercel
   - a guest reloading and rejoining; the host reloading, which closes the room for the guest;
   - match recording (non-host refused, duplicates ignored).
 
-## 2c. Login: Google, @everfit.io only (2026-10-01)
+## 2c. Login: Google (2026-10-01)
+
+Update 2026-10-01: any Google account may play (user: "tài khoản google nào cũng đc"). The domain check stays behind `ALLOWED_DOMAIN`, which is empty by default; when it is empty there is no `hd` hint and no domain line on the login card.
 
 User: "cần google login, và chỉ login được với account @everfit.io … mỗi account google chỉ link 1 1 tài khoản, ko cần pin, cần nhập tên là được; sau khi có tài khoản rồi thì không show màn hình chọn nhân vật và nhập tên nữa".
 - **Client** (`app.js`): Google Identity Services button with `hd: everfit.io` and `auto_select`. The client id comes from `/api/config`: the game's own OAuth client "Thú Chiến" (`447903417219-…`), created 2026-10-01.

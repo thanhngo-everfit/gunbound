@@ -1,4 +1,4 @@
-// Google login (@everfit.io only). One Google account = one game account (name + pilot).
+// Google login (any Google account). One Google account = one game account (name + pilot).
 // POST { token }                     → resume a session (no Google round trip)
 // POST { credential }                → { needName, suggest } for a new Google account, else a session
 // POST { credential, name, gender }  → create the account with that (unique) name

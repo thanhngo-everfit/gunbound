@@ -37,7 +37,7 @@ let nextPid = 1;
 
 const lobbyList = () => [...rooms.values()].map(r => r.info());
 
-// Google accounts (@everfit.io only): one Google account = one game name + pilot, kept in data/accounts.json
+// Google accounts (any Google account): one Google account = one game name + pilot, kept in data/accounts.json
 // as { users: { [googleSub]: { name, gender, email } }, names: { [lowercase name]: googleSub }, sessions: { [token]: sub } }.
 const ACCOUNTS_FILE = path.join(ROOT, 'data', 'accounts.json');
 let accounts = {};

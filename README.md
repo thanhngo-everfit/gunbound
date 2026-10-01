@@ -23,7 +23,7 @@ One-time setup (both services have a free plan that covers an office):
    `thuchien:`, change it with `REDIS_PREFIX`). It adds `KV_REST_API_URL` and `KV_REST_API_TOKEN`.
 2. **Ably:** sign up at ably.com (free plan), create an app, and copy its **root API key**. In Vercel project Settings →
    Environment Variables, add `ABLY_API_KEY` with that key.
-3. **Google login:** sign-in is Google only, restricted to **@everfit.io**. The game has its own OAuth client
+3. **Google login:** sign-in is Google only; any Google account works (set `ALLOWED_DOMAIN=everfit.io` to limit it). The game has its own OAuth client
    ("Thú Chiến", `447903417219-…apps.googleusercontent.com`, override with `GOOGLE_CLIENT_ID`). Its
    **Authorized JavaScript origins** must list the game's production URL and `http://localhost:3000` (exact origins,
    no wildcards). While the consent screen is External + Testing, only its test users can sign in: publish it.

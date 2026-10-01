@@ -99,7 +99,7 @@ for (const b of document.querySelectorAll('.gender-pick [data-g]')) {
 renderGender();
 
 // ---------- login ----------
-// Google sign-in, @everfit.io only (the server checks the token). One Google account = one game account:
+// Google sign-in (the server checks the token). One Google account = one game account:
 // the first visit picks a name and a pilot; after that a remembered session goes straight to the lobby.
 
 let pendingCredential = null;
@@ -157,14 +157,14 @@ async function startGoogle() {
   const onCredential = c => { pendingCredential = c.credential; sfx.ensure(); hello({ credential: c.credential }); };
   if (cfg.fakeGoogle) {
     // offline test stand-in (tools/dev-vercel.mjs): type an email instead of a Google popup
-    $('gbtn').innerHTML = '<input id="fake-email" placeholder="test@everfit.io"><button class="btn gold" id="fake-go" type="button">Đăng nhập (giả lập)</button>';
+    $('gbtn').innerHTML = '<input id="fake-email" placeholder="test@gmail.com"><button class="btn gold" id="fake-go" type="button">Đăng nhập (giả lập)</button>';
     $('fake-go').onclick = () => { const em = $('fake-email').value.trim(); onCredential({ credential: `fake:${em}:${em.toLowerCase()}` }); };
     return;
   }
   await new Promise((ok, fail) => { const s = document.createElement('script'); s.src = 'https://accounts.google.com/gsi/client'; s.onload = ok; s.onerror = fail; document.head.appendChild(s); })
     .catch(() => loginError('Không tải được Google Sign-In, hãy kiểm tra mạng'));
   if (!window.google?.accounts?.id) return;
-  google.accounts.id.initialize({ client_id: cfg.googleClientId, callback: onCredential, hd: cfg.domain || 'everfit.io', auto_select: true });
+  google.accounts.id.initialize({ client_id: cfg.googleClientId, callback: onCredential, ...(cfg.domain ? { hd: cfg.domain } : {}), auto_select: true });
   google.accounts.id.renderButton($('gbtn'), { theme: 'filled_blue', size: 'large', width: 300, text: 'signin_with', shape: 'pill' });
   google.accounts.id.prompt();
 }
