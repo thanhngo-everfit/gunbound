@@ -19,7 +19,8 @@ live in Redis behind the functions in `api/`.
 
 One-time setup (both services have a free plan that covers an office):
 1. **Redis:** in the Vercel project, open Storage → Marketplace → **Upstash for Redis** → create a free database and
-   connect it to the project. It adds `KV_REST_API_URL` and `KV_REST_API_TOKEN`.
+   connect it to the project (an existing database from another project works too: every key is prefixed
+   `thuchien:`, change it with `REDIS_PREFIX`). It adds `KV_REST_API_URL` and `KV_REST_API_TOKEN`.
 2. **Ably:** sign up at ably.com (free plan), create an app, and copy its **root API key**. In Vercel project Settings →
    Environment Variables, add `ABLY_API_KEY` with that key.
 3. **Deployment Protection:** turn off Vercel Authentication (Settings → Deployment Protection) so coworkers without a
