@@ -14,4 +14,9 @@ export const DRAGONS = [[1, 'dragonW', 'Rồng Trắng'], [3, 'dragonR', 'Rồng
 export const DRAGON_MIN_GAMES = 10;
 export const RANK_LIST = [...RANKS.map(([gp, id, name]) => ({ id, name, gp })), ...[...DRAGONS].reverse().map(([top, id, name]) => ({ id, name, top }))]; // low → high;
 
+// GP one finished match adds (same formula as gpOf, so the results screen needs no database round trip)
+export const gpGainOf = (p, winner) => 2 + (winner && p.team === winner ? 10 : 0) + (p.kills || 0) * 3;
+// the GP ladder rank for a GP total (dragons come from leaderboard places and are left to the lobby)
+export const rankAt = gp => RANKS[RANKS.findLastIndex(([min]) => gp >= min)];
+
 export const gpOf = s => (s.games || 0) * 2 + (s.wins || 0) * 10 + (s.kills || 0) * 3;

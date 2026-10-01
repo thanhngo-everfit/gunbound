@@ -253,6 +253,38 @@ check('legendary: Rồng, Tề Thiên, Thỏ are random-only', LEGENDARY().map(x
   check('legendary: "?" rolls a legendary ~30%', legend / N > 0.22 && legend / N < 0.38, `${legend}/${N}`);
   check('legendary: bots never get one', botLegend === 0, `${botLegend}`); }
 
+// RANKED: only real, finished matches count (user: "hoàn thành trận đấu thật mới được tính điểm")
+function rankedRoom({ practice = false, botsOnB = false } = {}) {
+  const io = { to: () => ({ emit() {}, except: () => ({ emit() {} }) }) };
+  let recorded = null;
+  const r = new Room(1, 'R', io, () => {}, practice, { profile: () => ({ gp: 15, rankId: 'chick', rank: 'Gà Con' }), recordMatch: p => { recorded = p; } });
+  const a = { token: 'a', pid: 'ua', name: 'An', socket: { id: 'a', join() {}, leave() {}, emit() {} }, gender: 'm' };
+  const b = { token: 'b', pid: 'ub', name: 'Bo', socket: { id: 'b', join() {}, leave() {}, emit() {} }, gender: 'm' };
+  r.join(a);
+  if (botsOnB) r.addBot(a, 'B'); else { r.join(b); r.members.get('b').team = 'B'; r.members.get('b').ready = true; }
+  r.members.get('a').team = 'A';
+  r.start(a);
+  const g = r.game; clearInterval(g.tick); for (const h of g.timers) clearTimeout(h); g.timers.clear();
+  g.startedAt = Date.now() - 200000; g.turnNo = 20;
+  for (const t of g.tanks) { t.stats.shots = 3; t.stats.kills = 1; t.connected = true; }
+  let end = null; r.emit = (ev, d) => { if (ev === 'game:end') end = d; };
+  return { r, g, a, b, end: () => end, recorded: () => recorded };
+}
+{ const t = rankedRoom(); t.r.finish('A', false); const e = t.end();
+  check('ranked: a real 1v1 to the end counts for both', !e.unranked && t.recorded()?.length === 2, JSON.stringify(e.unranked));
+  const win = e.players.find(p => p.name === 'An');
+  check('ranked: GP gain = 2 + 10 win + 3/kill', win.gpGain === 15 && e.players.find(p => p.name === 'Bo').gpGain === 5, `win=${win.gpGain}`); }
+{ const t = rankedRoom({ practice: true }); t.r.practice = true; t.r.finish('A', false); check('ranked: practice never counts', !!t.end()?.unranked && !t.recorded(), t.end()?.unranked); }
+{ const t = rankedRoom({ botsOnB: true }); t.r.finish('A', false); check('ranked: humans vs NPC only does not count', /NPC/.test(t.end().unranked || '') && !t.recorded(), t.end().unranked); }
+{ const t = rankedRoom(); t.r.finish('A', true); check('ranked: a forfeit win does not count', /bỏ trận/.test(t.end().unranked || '') && !t.recorded(), t.end().unranked); }
+{ const t = rankedRoom(); t.g.startedAt = Date.now() - 30000; t.r.finish('A', false); check('ranked: a match under 2 minutes does not count', /ngắn/.test(t.end().unranked || '') && !t.recorded(), t.end().unranked); }
+{ const t = rankedRoom(); t.g.turnNo = 2; t.r.finish('A', false); check('ranked: too few turns does not count', /ngắn/.test(t.end().unranked || ''), t.end().unranked); }
+{ const t = rankedRoom(); t.r.finish(null, false); check('ranked: a draw does not count', !!t.end().unranked && !t.recorded(), t.end().unranked); }
+{ const t = rankedRoom(); t.g.tanks.find(x => x.name === 'Bo').stats.shots = 0; t.r.finish('A', false);
+  check('ranked: a player who never fired gets nothing', t.recorded()?.map(p => p.name).join() === 'An' && t.end().players.find(p => p.name === 'Bo').gpGain == null, JSON.stringify(t.recorded()?.map(p => p.name))); }
+{ const t = rankedRoom(); t.g.tanks.find(x => x.name === 'Bo').connected = false; t.r.finish('A', false);
+  check('ranked: a player who left before the end gets nothing', t.recorded()?.map(p => p.name).join() === 'An', JSON.stringify(t.recorded()?.map(p => p.name))); }
+
 console.log(results.map(r => r.join(' | ')).join('\n'));
 console.log(results.filter(r => r[0] === 'FAIL').length + ' failing of ' + results.length);
 process.exit(0);

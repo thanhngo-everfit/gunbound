@@ -1,5 +1,6 @@
 import { XE, XE_LIST, PICKABLE, LEGENDARY, LEGEND_CHANCE, LEGEND_CHANCE_ROOM, moveBudget, SS_COOLDOWN, SUDDEN_TYPES, DRAIN_STEP, SCORE_RESPAWN_TURNS, ITEMS, START_GOLD, TELE_SHOT } from '../shared/xe.js';
 import { planShot, BOT_NAMES } from './bot.js';
+import { gpGainOf, rankAt } from '../shared/ranks.js';
 import { genTerrain, spawnPositions, standSpot, settle, moveStep, crawlPath, swimAshore, TANK_R, simulateShot, mulberry32, replayMs, rollWind, driftWind, newWeather, advanceWeather, hasPainted, MAPS, MAP_IDS, W, WATER_Y } from '../shared/physics.js';
 
 const TURN_SECS = [15, 20, 30];
@@ -11,6 +12,9 @@ const MAX_PLAYERS = 10;
 const TEAM_SIZE = 5;
 const TICK_MS = 33;
 const LOAD_MAX_MS = 20000;
+// a match only counts for GP/rank when it was a real one (user: "hoàn thành trận đấu thật mới được tính điểm")
+const RANKED_MIN_MS = 120000;      // at least 2 minutes of play
+const RANKED_TURNS_PER_XE = 2;     // and about two turns for every xe in the match
 
 export class Room {
   // hooks: where career stats live (the Node server's data/stats.json, or Redis behind the Vercel functions).
@@ -266,6 +270,7 @@ export class Room {
     const g = this.game;
     if (!g || g.phase !== 'loading') return;
     g.phase = 'ready';
+    g.startedAt = Date.now();
     this.emit('game:ready', { introMs: INTRO_MS });
     this.later(INTRO_MS, () => this.nextTurn());
   }
@@ -749,6 +754,18 @@ export class Room {
     return true;
   }
 
+  // why this match doesn't count for GP (null when it does)
+  unrankedReason(winner, forfeit) {
+    const g = this.game;
+    if (this.practice) return 'Phòng luyện tập không tính điểm';
+    if (!winner) return 'Trận hoà không tính điểm';
+    if (forfeit) return 'Đối thủ bỏ trận nên trận này không tính điểm';
+    const humanTeams = new Set(g.tanks.filter(t => !t.bot && !t.dummy).map(t => t.team));
+    if (humanTeams.size < 2) return 'Chỉ tính điểm khi cả hai đội đều có người chơi thật (đánh với NPC không tính)';
+    if (Date.now() - (g.startedAt || Date.now()) < RANKED_MIN_MS || g.turnNo < g.tanks.length * RANKED_TURNS_PER_XE) return 'Trận quá ngắn nên không tính điểm';
+    return null;
+  }
+
   finish(winner, forfeit) {
     const g = this.game;
     if (!g) return;
@@ -756,20 +773,24 @@ export class Room {
     for (const h of g.timers) clearTimeout(h);
     this.processDeaths();
     const players = g.tanks.filter(t => !t.dummy).map(t => ({ id: t.id, name: t.name, team: t.team, xe: t.xe, alive: t.alive, hp: t.hp, bot: !!t.bot, ...t.stats }));
-    // rank-ups for the results screen (compare the ladder before and after this match)
-    const counted = winner && !this.practice;
-    const before = counted ? new Map(players.filter(p => !p.bot).map(p => [p.id, profile(p.name)])) : null;
-    if (counted) this.hooks.recordMatch(players, winner);
-    if (counted) for (const p of players) {
-      const b = before.get(p.id);
+    // Only a real, finished match counts; the reason is shown on the results screen otherwise.
+    const unranked = this.unrankedReason(winner, forfeit);
+    // and only the people who stayed to the end and actually played get it
+    const earners = unranked ? [] : players.filter(p => {
+      const t = g.tanks.find(x => x.id === p.id);
+      return !p.bot && t.connected && this.members.has(t.token) && t.stats.shots > 0;
+    });
+    if (earners.length) this.hooks.recordMatch(earners, winner);
+    for (const p of earners) {
+      const b = this.hooks.profile(p.name), gain = gpGainOf(p, winner);
+      p.gpGain = gain;
       if (!b) continue;
-      const a = profile(p.name);
-      p.gpGain = a.gp - b.gp;
-      p.rankId = a.rankId; p.rankName = a.rank;
-      if (a.rankId !== b.rankId && a.gp >= b.gp) p.rankUp = { from: b.rank, to: a.rank, id: a.rankId };
+      const [, fromId, from] = rankAt(b.gp), [, toId, to] = rankAt(b.gp + gain);
+      p.rankId = toId; p.rankName = to;
+      if (toId !== fromId) p.rankUp = { from, to, id: toId };
     }
     const mvp = players.reduce((a, b) => (b.dealt + b.kills * 300 > (a ? a.dealt + a.kills * 300 : -1) ? b : a), null);
-    this.emit('game:end', { winner, forfeit, players, mvp: mvp?.id, practice: this.practice });
+    this.emit('game:end', { winner, forfeit, players, mvp: mvp?.id, practice: this.practice, unranked });
     this.game = null;
     this.state = 'waiting';
     for (const m of this.members.values()) {

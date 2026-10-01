@@ -186,6 +186,20 @@ Every shot has its own projectile sprite (30 total) and look key. Every SS has a
 
 ## 5. Economy and progression
 
+**Ranked matches only (2026-10-01).** User: "make sure là hoàn thành trận đấu thật mới được tính điểm để lên hạng". A match adds GP and rank only when all of these hold. `Room.unrankedReason()` checks them, and the results screen shows the reason when a match doesn't count:
+- It is not a practice room.
+- There is a winner: no draw.
+- It is not won by forfeit.
+- Both teams have at least one real player: matches against NPCs only don't count.
+- It lasted at least 2 minutes of play and about 2 turns per xe.
+
+Within a counted match, only players still in the room at the end who fired at least once get credit. GP never goes down, so leaving early only loses the reward.
+
+The Vercel `api/match` endpoint also checks:
+- Only the room's host can report, and each match id counts once.
+- The report needs at least 2 real players.
+- A room can report at most one match every 90 s.
+
 - **Gold (G)** is earned in a match from shot bonuses: Trúng đích = dealt/4, Thưởng góc cao +150 (angle ≥ 70), Bắn xa +200 (> 1100 px), Phát bắn tuyệt vời +250 (≥ 350 dealt), Trúng nhiều mục tiêu +120 each, Tuyệt chiêu +100 (an SS that hits), Hạ gục +300 / Hạ gục kép +800, and Bắn trúng đồng đội −100 each ally.
 - **Career stats** are kept per name in data/stats.json (games, wins, kills, dealt, gold, xe usage).
 - **Ranks (Gunbound ladder, shared/ranks.js).** This replaced the old win-count titles (Tân Binh…Huyền Thoại) on 2026-09-30, at the user's request ("gà con…").

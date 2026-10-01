@@ -517,3 +517,6 @@ input, select { background: #05112e; border-color: #9cd0ff; }
 .rd-role { font-size: 13px; color: #cfe0ff; }
 .rd-passive { margin: 8px auto 0; max-width: 520px; font-size: 13px; color: #ffe9c0; background: rgba(0,0,0,.25); border-radius: 10px; padding: 6px 10px; }
 #rider-modal { z-index: 60; position: fixed; }
+
+/* why a match didn't count for GP */
+.result-note { margin: 4px auto 8px; max-width: 560px; padding: 6px 12px; border-radius: 10px; background: rgba(255, 190, 60, .16); border: 1px solid rgba(255, 210, 90, .55); color: #ffe6a0; font-size: 14px; font-weight: 700; line-height: 1.4; }

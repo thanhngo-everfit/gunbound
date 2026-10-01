@@ -2170,6 +2170,11 @@ export class Game {
     else if (res.winner === myTeam) { title.textContent = 'CHIẾN THẮNG!'; title.className = 'result-title win'; }
     else { title.textContent = 'THẤT BẠI'; title.className = 'result-title lose'; }
     $('result-sub').textContent = res.winner ? `${TEAM_NAME[res.winner]} chiến thắng${res.forfeit ? ' (đối thủ bỏ cuộc)' : ''}` : 'Cả hai đội đều bị hạ';
+    // a match that doesn't count for GP says why (practice, bots only, too short, forfeit…)
+    $('result-note').textContent = res.unranked ? `⚠ ${res.unranked}` : '';
+    $('result-note').style.display = res.unranked ? '' : 'none';
+    const me = res.players.find(p => this.me && p.id === this.me.id);
+    if (!res.unranked && me && me.gpGain == null) { $('result-note').textContent = '⚠ Bạn không được tính điểm trận này (rời trận hoặc chưa bắn phát nào)'; $('result-note').style.display = ''; }
     const rows = [...res.players].sort((a, b) => a.team.localeCompare(b.team) || b.dealt - a.dealt);
     $('result-body').innerHTML = rows.map(p =>
       `<tr class="${p.team} ${p.id === res.mvp ? 'mvp' : ''}"><td>${p.rankId ? `<img class="ico" src="${rankIcon(p.rankId)}" alt="" title="${p.rankName}"> ` : ''}${esc(p.name)}</td><td>${XE[p.xe].name}</td><td>${p.dealt}</td><td>${p.kills}</td><td>${p.deaths || 0}</td><td>${p.gold || 0} G</td><td>${p.gpGain != null ? `+${p.gpGain}` : '—'}</td><td>${p.alive ? 'Còn sống' : 'Bị hạ'}</td></tr>`
