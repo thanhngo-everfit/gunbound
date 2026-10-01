@@ -6,7 +6,7 @@ import { MAPS, REPLAY_SPEED, SS_DELAY_FRAMES, WEATHERS } from '/shared/physics.j
 import { Particles } from './fx.js';
 
 const HUD_H = 150;
-const CHARGE_MS = 1700;
+const CHARGE_MS = 2400; // 0→100 while SPACE is held (1.7 s felt too fast)
 const TEAM_NAME = { A: 'Đội Đỏ', B: 'Đội Xanh' };
 // On-screen size (world px, longest side) of projectile sprites that need to differ from the default.
 // Projectiles read big and glowing in Gunbound (~4-5% of the playfield height with the glow).
@@ -180,7 +180,8 @@ export class Game {
     this.power = 0;
     this.charging = false;
     this.fired = false;
-    this.lastPower = {};
+    this.lastPower = undefined; // one marker for every shot: they all fly the same curve
+    this.powerMark = undefined; // a mark the player clicks onto the power bar to aim the next shot by
     this.angle = this.me ? this.me.angle : 45;
     $('result').classList.remove('show');
     this.drawLoadMap();
@@ -1081,7 +1082,7 @@ export class Game {
     this.power = Math.min(100, ((performance.now() - this.chargeStart) / CHARGE_MS) * 100);
     this.charging = false;
     this.fired = true;
-    this.lastPower[this.selShot] = this.power;
+    this.lastPower = this.power;
     this.socket.emit('game:fire', { angle: Math.round(this.angle), power: Math.round(this.power * 10) / 10, shot: this.selShot });
   }
 
@@ -1151,6 +1152,14 @@ export class Game {
   bindButtons() {
     for (const b of $('shots').querySelectorAll('[data-shot]')) b.onclick = () => this.isMyTurn() && this.selectShot(b.dataset.shot);
     $('btn-pass').onclick = () => { if (this.isMyTurn()) this.socket.emit('game:pass'); };
+    // click the power bar to drop a mark there (click it again to clear it), to time the next shot by
+    const bar = $('power-bar');
+    bar.onpointerdown = e => {
+      e.preventDefault();
+      const r = bar.getBoundingClientRect(), pct = Math.max(0, Math.min(100, ((e.clientX - r.left) / r.width) * 100));
+      this.powerMark = this.powerMark !== undefined && Math.abs(this.powerMark - pct) < 2 ? undefined : Math.round(pct * 10) / 10;
+    };
+    bar.oncontextmenu = e => { e.preventDefault(); this.powerMark = undefined; };
     $('btn-quit').onclick = () => this.askQuit(true);
     $('quit-no').onclick = () => this.askQuit(false);
     const mute = $('mute');
@@ -1560,7 +1569,7 @@ export class Game {
     const me = this.me;
     if (!me || me.xe !== 'cu' || !me.alive || !this.isMyTurn() || this.anim) return;
     const shot = XE[me.xe].shots[this.selShot];
-    const power = this.charging ? this.power : this.lastPower[this.selShot] ?? 50;
+    const power = this.charging ? this.power : this.powerMark ?? this.lastPower ?? 50;
     const launch = worldAngle(this.mask, me, this.angle), a = (launch * Math.PI) / 180;
     const tip = barrelTip({ x: me.dx, y: me.dy, facing: me.facing }, launch);
     const v0 = VMAX * Math.max(0.04, power / 100), wv = windVec(this.wind), wm = (shot.windMul ?? 1) * XE[me.xe].windMul;
@@ -2114,8 +2123,9 @@ export class Game {
     }
     this.set('pow', $('power-fill'), 'width', this.power + '%');
     this.set('powv', $('power-val'), 'text', String(Math.round(this.power)));
-    const lp = this.lastPower[this.selShot];
+    const lp = this.lastPower, pm = this.powerMark;
     this.set('powl', $('power-last'), 'left', lp === undefined ? '-10px' : `calc(${lp}% - 1px)`);
+    this.set('powm', $('power-mark'), 'left', pm === undefined ? '-20px' : `calc(${pm}% - 6px)`);
     const budget = me ? XE[me.xe].rating.coDong * 24 : 1;
     this.set('move', $('move-fill'), 'width', (me && this.activeId === me.id ? (this.moveLeft / budget) * 100 : 100) + '%');
     $('hud-bottom').classList.toggle('waiting', !this.isMyTurn());

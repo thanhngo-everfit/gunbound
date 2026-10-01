@@ -28,7 +28,7 @@ Sources: the user's screenshots and a match video (`~/Downloads/YTSave_…Gunbou
 | SS | The battlefield **darkens** while the SS flies (the HUD stays lit); the shot glows | `dark` overlay up to 0.62 during SS flight, plus a cut-in banner |
 | Aim | Translucent disc around the active mobile with its angle range, a barrel line, and the angle number above | drawGauge + blue angle badge + orange "LƯỢT" tag |
 | Wind | 360° direction, strength 0–26. Each match has its own base wind. It **holds for several turns** and only drifts a little (±1–2 strength, tens of degrees). | rollWind() at match start; driftWind() at 35% per turn |
-| HUD | Blue metal panels; 1 / 2 / SS square buttons; big red power bar with a last-power marker; thin "Move" bar; "LAST 83°"; big red turn timer; SCORE box; gold counter | Same, with Vietnamese labels |
+| HUD | Blue metal panels; 1 / 2 / SS square buttons; big red power bar with a last-power marker (one for all shots, since they fly the same curve) and a mark the player clicks onto the bar to time the next shot (click it again or right-click to clear); thin "Move" bar; "LAST 83°"; big red turn timer; SCORE box; gold counter | Same, with Vietnamese labels |
 | Match start | Loading screen with a card per slot (empty slots too), room/map/rules panel, and a full-map strip with spawn markers. Then a diagonal wipe, a "SCORE START!" banner and a camera flyover of the spawns. | Loading screen, wipe, "BẮT ĐẦU!" banner, INTRO_MS flyover |
 | Bonuses | Chat shows "[High Angle Bonus] +150", "[Good Shot Bonus] +206", paid in gold | shotBonus() in room.js |
 | Chat | Speech bubbles above players | drawBubble |
@@ -37,7 +37,7 @@ Sources: the user's screenshots and a match video (`~/Downloads/YTSave_…Gunbou
 ## 3. Core rules
 
 - **Turn order = delay system.** Every tank has `delay`. The alive tank with the lowest delay acts next (ties go to the earlier `order`). After acting, it adds the shot's delay plus the pixels it moved. A timeout adds 800. Stronger shots cost more delay.
-- **A turn:** move (limited by the move budget, the "LỰC ĐI" bar), set the angle (↑↓, within the xe's range), hold SPACE to charge power (0→100 in 1.7 s), release to fire. Keys 1/2/3 pick Shot 1 / Shot 2 / SS.
+- **A turn:** move (limited by the move budget, the "LỰC ĐI" bar), set the angle (↑↓, within the xe's range), hold SPACE to charge power (0→100 in 2.4 s; 1.7 s felt too fast), release to fire. Keys 1/2/3 pick Shot 1 / Shot 2 / SS.
 - **Turn time** is a room setting: 15, 20 (default) or 30 s. A disconnected player's turn lasts 4 s.
 - **SS (Gunbound rule, 2026-09-30):**
   - SS is ready from the start. After you fire it, it is locked for your next 4 turns (`SS_COOLDOWN`), shown as 🔒N on the button and as the refilling "SS" bar.

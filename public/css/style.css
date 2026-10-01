@@ -289,6 +289,13 @@ input:focus, select:focus { border-color: var(--gold); }
 .power-bar { height: 28px; border-radius: 4px; background: #05112e; border: 2px solid #9cd0ff; box-shadow: 0 0 0 2px #061a44; }
 .power-fill { background: linear-gradient(180deg, #ff7a6a, #ff1a1a 45%, #c00000 55%, #ff2a2a); }
 .power-last { background: #ffe14a; box-shadow: 0 0 6px #ffe14a; width: 4px; }
+/* the player's own mark: a white pin with a notch top and bottom */
+.power-mark { position: absolute; top: -2px; bottom: -2px; left: -20px; width: 12px; pointer-events: none;
+  background: linear-gradient(90deg, transparent 4px, #fff 4px 8px, transparent 8px); filter: drop-shadow(0 0 3px #000); }
+.power-mark::before, .power-mark::after { content: ''; position: absolute; left: 0; border: 6px solid transparent; }
+.power-mark::before { top: 0; border-top-color: #fff; border-bottom: 0; }
+.power-mark::after { bottom: 0; border-bottom-color: #fff; border-top: 0; }
+.power-bar { cursor: crosshair; }
 .power-ticks { background: repeating-linear-gradient(90deg, transparent 0 calc(10% - 1px), rgba(156,208,255,.35) calc(10% - 1px) 10%); }
 .power-label { color: #d8ecff; }
 .power-val { font-family: 'Orbitron', sans-serif; font-size: 18px; color: #ffe14a; }
