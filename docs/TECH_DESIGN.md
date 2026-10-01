@@ -87,17 +87,16 @@ User: "cần google login, và chỉ login được với account @everfit.io �
 
 ## 2d. Outfits (2026-10-01)
 
-- **Look string:** the player's look travels in the old `gender` field: `"<pilot>[.h<n>][.g<n>][.s<n>]"`, e.g. `f2.h3.g1`.
+- **Look string:** the player's look travels in the old `gender` field: `"<pilot>[.c<n>][.g<n>][.s<n>]"` (hair colour, glasses, top), e.g. `f2.c3.g1`.
   - `shared/outfits.js` parses and validates it (`cleanLook`, re-exported as `cleanGender` in `shared/ids.js`), so the server, the Vercel API and the host worker all accept and store it unchanged.
-- **Drawing:** `assets.js pilotImage(look)` dresses a plain base pilot (`pilot-base.jpg`, fixed boxes, enclosed key gaps at `holesMin` 75) with `PILOT_FIT` anchors measured per pilot: hat brim, eye line, tee polygon, chest and back.
+- **Drawing:** `assets.js pilotImage(look)` dresses a plain base pilot (`pilot-base.jpg`, fixed boxes, enclosed key gaps at `holesMin` 75) with `PILOT_FIT` anchors measured per pilot: hairline, eyes, tee polygon, chest and back. The base pilots hold a painted gamepad (re-measure `PILOT_FIT` whenever `pilot-base.jpg` changes).
   - **Hair** (`hairOf` / `baldHead` / `hairLayers` in assets.js):
-    - A hair mask comes from colour per pilot (brown / orange / pink HSV tests, inside a head zone, with brows, eyes and cheeks excluded), grown into the surrounding ink.
+    - A hair mask comes from colour per pilot (brown / orange / pink HSV tests, inside a head zone, with brows, eyes, mouth and cheeks excluded), grown into the surrounding ink. Below the chin only true ink grows, so the grey gamepad isn't dyed; f2's twin tails have their own zones beside the body, and pink-blush on its cheeks is told apart by hue.
     - Hairstyle swaps (bald head + transplant) were tried and removed; only the dye remains.
     - Dye multiplies the hair's own brightness, relative to its base tone.
   - Glasses are drawn in code (`outfit-art.js`) from `PILOT_FIT.head` (skull centre, brim y, half width, top) and `PILOT_FIT.eyes` (near eye, far eye, ear, lens radius).
-    - Hats have a `back` layer drawn before the pilot and a `front` layer after it, so bands and brims wrap the head; ink width is `W * 0.009`.
     - `outfits.jpg` is now only used for the cape.
-  - Tops come from `TOPS` and are painted into the tee: the mask is the light, unsaturated pixels inside the polygon; colour, stripes, camo, flowers, metal, emblem and the cape (sheet row 3, col 2) are multiplied by the tee's brightness, so line art and cel shading survive.
+  - Tops come from `TOPS` and are painted into the tee: the mask is the light, unsaturated pixels inside the polygon, flood-filled from the tee's white so the grey shorts past the hem's ink line stay unpainted; colour, stripes, camo, flowers, metal, emblem and the cape (sheet row 3, col 2) are multiplied by the tee's brightness, so line art and cel shading survive.
   - `s8` is the classic set: the old `pilot.jpg` art (`ASSETS.pilotClassic`).
 - **Sizing:** dressed canvases are padded, with `baseW`/`baseH`/`padL`/`padT`, and `xeSprite` seats riders by the bare pilot so their size doesn't change. Caches key on the look string.
 - **Sessions:** a resumed session must not send the browser's look (it would overwrite the account's); only account creation and `player:gender` save it.

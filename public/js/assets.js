@@ -183,10 +183,10 @@ const XE_SHEETS = [
     boxes: { phuong: [48, 38, 502, 422], voi: [492, 12, 938, 422], bachtuoc: [902, 76, 1372, 412], cu: [98, 448, 594, 752], tethien: [646, 412, 1104, 758] },
     erase: { tethien: [[646, 412, 730, 428]], phuong: [[486, 300, 502, 422]], voi: [[492, 12, 506, 220], [890, 240, 938, 422], [792, 411, 938, 422]], bachtuoc: [[902, 76, 940, 210]] } },
 ];
-// Base pilots (2026-10-01): plain hair, bare face, white tee, so outfits fit like Gunbound's avatars.
-// Its key is a softer purple-magenta, so enclosed gaps (between arm and chest) are keyed at a lower threshold.
-const PILOT_SHEET = { src: '/assets/sheets/pilot-base.jpg', order: ['m', 'f', 'm2', 'f2'], holes: true, holesMin: 75, view: [1400, 781],
-  boxes: { m: [52, 140, 378, 645], f: [380, 140, 702, 645], m2: [702, 125, 1016, 645], f2: [1018, 165, 1390, 645] } };
+// Base pilots (2026-10-01): plain hair, bare face, white tee, both hands on a gamepad (painted in, so the hands hold
+// something real: user "cánh tay như đưa vào không khí"), so outfits fit like Gunbound's avatars.
+const PILOT_SHEET = { src: '/assets/sheets/pilot-base.jpg', order: ['m', 'f', 'm2', 'f2'], holes: true, view: [1400, 781],
+  boxes: { m: [42, 145, 360, 665], f: [378, 140, 694, 665], m2: [698, 135, 1008, 665], f2: [1012, 170, 1392, 665] } };
 // the first pilots (aviator cap, goggles, jackets) live on as the "Bộ Phi Công" outfit
 const PILOT_CLASSIC_SHEET = { src: '/assets/sheets/pilot.jpg', rows: 1, order: ['m', 'f', 'm2', 'f2'] };
 
@@ -417,14 +417,14 @@ export function drawSmooth(ctx, img, x, y, w, h) {
 //   hat: [centre x, brim y, width] · eyes: [centre x, y, glasses width] · tee: polygon around the shirt · chest: emblem spot
 const PILOT_FIT = {
   // head: skull centre x, brim (hairline) y, half width, skull top · eyes: near eye, far eye, ear, lens radius
-  m: { head: [0.46, 0.235, 0.34, 0.05], eyes: [[0.45, 0.355], [0.625, 0.355], [0.2, 0.37], 0.075], chest: [0.42, 0.6], back: [0.27, 0.48],
-    tee: [[0.22, 0.45], [0.5, 0.43], [0.68, 0.52], [0.64, 0.75], [0.22, 0.75]] },
-  f: { head: [0.48, 0.245, 0.33, 0.09], eyes: [[0.475, 0.35], [0.64, 0.35], [0.21, 0.36], 0.075], chest: [0.44, 0.61], back: [0.28, 0.49],
-    tee: [[0.24, 0.46], [0.5, 0.45], [0.68, 0.53], [0.64, 0.75], [0.24, 0.75]] },
-  m2: { head: [0.5, 0.26, 0.32, 0.08], eyes: [[0.485, 0.385], [0.66, 0.385], [0.27, 0.39], 0.072], chest: [0.47, 0.62], back: [0.34, 0.5],
-    tee: [[0.31, 0.47], [0.55, 0.46], [0.7, 0.55], [0.66, 0.78], [0.31, 0.78]] },
-  f2: { head: [0.53, 0.225, 0.3, 0.08], eyes: [[0.49, 0.325], [0.675, 0.325], [0.33, 0.35], 0.068], chest: [0.49, 0.64], back: [0.38, 0.52],
-    tee: [[0.34, 0.49], [0.56, 0.48], [0.68, 0.56], [0.64, 0.78], [0.34, 0.78]] },
+  m: { head: [0.5, 0.25, 0.37, 0.03], eyes: [[0.47, 0.365], [0.69, 0.365], [0.24, 0.4], 0.082], chest: [0.35, 0.6], back: [0.22, 0.52],
+    tee: [[0.18, 0.5], [0.45, 0.5], [0.6, 0.55], [0.62, 0.76], [0.18, 0.78]] },
+  f: { head: [0.48, 0.26, 0.36, 0.06], eyes: [[0.48, 0.375], [0.69, 0.37], [0.22, 0.4], 0.082], chest: [0.33, 0.61], back: [0.22, 0.53],
+    tee: [[0.2, 0.52], [0.45, 0.53], [0.6, 0.56], [0.62, 0.77], [0.2, 0.78]] },
+  m2: { head: [0.52, 0.3, 0.37, 0.03], eyes: [[0.5, 0.385], [0.71, 0.385], [0.26, 0.42], 0.08], chest: [0.35, 0.62], back: [0.25, 0.55],
+    tee: [[0.22, 0.53], [0.48, 0.53], [0.62, 0.58], [0.64, 0.78], [0.22, 0.79]] },
+  f2: { head: [0.56, 0.27, 0.33, 0.05], eyes: [[0.53, 0.36], [0.74, 0.36], [0.33, 0.37], 0.075], chest: [0.42, 0.6], back: [0.34, 0.53],
+    tee: [[0.33, 0.51], [0.56, 0.5], [0.68, 0.56], [0.66, 0.75], [0.33, 0.76]] },
 };
 const OUTFIT_SHEET = { src: '/assets/sheets/outfits.jpg', green: true, cols: 5, rows: 3 };
 // tops: tee colour, an optional pattern and chest emblem, and the superhero's cape (a sprite from the sheet's 3rd row)
@@ -459,6 +459,21 @@ function teeMask(base, fit) {
     if (a < 200 || mx < 120 || (mx - mn) / mx > 0.16) continue;
     mask[i] = Math.min(1, (mx - 120) / 60); // fade toward the outline
   }
+  // keep only the tee itself: flood from its bright white, so the grey shorts past the hem's
+  // ink line stay unpainted (the arm splits the tee, so every white pixel seeds)
+  const keep = new Uint8Array(W * H), stack = [];
+  for (let i = 0; i < W * H; i++) if (mask[i] && Math.min(d[i * 4], d[i * 4 + 1], d[i * 4 + 2]) > 205) stack.push(i);
+  while (stack.length) {
+    const q = stack.pop();
+    if (keep[q] || !mask[q]) continue;
+    keep[q] = 1;
+    const px = q % W;
+    if (px > 0) stack.push(q - 1);
+    if (px < W - 1) stack.push(q + 1);
+    if (q >= W) stack.push(q - W);
+    if (q < W * (H - 1)) stack.push(q + W);
+  }
+  for (let i = 0; i < W * H; i++) if (!keep[i]) mask[i] = 0;
   return mask;
 }
 const rgb = hex => [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16));
@@ -519,7 +534,8 @@ function hsv(r, g, b) {
 const IS_HAIR = {
   brown: (h, s, v) => h >= 5 && h <= 40 && s > 0.35 && v > 0.12 && v < 0.75,
   orange: (h, s, v) => h >= 8 && h <= 42 && s > 0.62 && v > 0.55,
-  pink: (h, s, v) => (h >= 295 || h <= 6) && s > 0.2 && v > 0.5,
+  // incl. the pale pink shine streaks
+  pink: (h, s, v) => (h >= 295 || h <= 6) && (s > 0.2 ? v > 0.5 : s > 0.07 && v > 0.82),
 };
 const hairCache = new Map();
 // { mask (0..1 per pixel, hair incl. its outline), front (pixel is over the head, not behind the body) }
@@ -530,19 +546,23 @@ function hairOf(id) {
   const x = c.getContext('2d', { willReadFrequently: true }); x.drawImage(base, 0, 0);
   const d = x.getImageData(0, 0, W, H).data, is = IS_HAIR[HAIR_KIND[id]];
   const [[nx, ny], [fx]] = fit.eyes, [hx, hy, hr, ht] = fit.head;
+  const twin = id === 'f2';
   // the face box: eyes, brows and cheeks stay with the face (brows are hair-coloured)
   // brows and eyes are never hair; on the cheeks only strongly coloured pixels are (blush is a paler pink than hair)
-  const inFace = (px, py) => py > (ny - 0.085) * H && py < (ny + 0.05) * H && px > (nx - 0.08) * W && px < (fx + 0.05) * W;
+  const inFace = (px, py) => py > (ny - 0.085) * H && py < (ny + 0.05) * H && px > (nx - 0.08) * W && px < (fx + (twin ? 0.03 : 0.05)) * W;
   const inCheek = (px, py) => py >= (ny + 0.05) * H && py < (ny + 0.14) * H && px > (nx - 0.06) * W && px < (fx + 0.06) * W;
+  // nose and mouth (lips are pink) are never hair
+  const inMouth = (px, py) => py >= (ny + 0.03) * H && py < (ny + 0.15) * H && px > nx * W && px < fx * W;
   const hair = new Uint8Array(W * H);
-  // hair lives above the chin, except twin tails that hang beside the body
-  const chin = (ny + 0.12) * H, tails = id === 'f2' ? 0.88 * H : 0;
-  const inZone = (px, py) => py < chin || (py < tails && (px < 0.4 * W || px > 0.66 * W));
+  // hair lives above the chin, except twin tails that hang beside the body (clear of the gamepad and knees)
+  const chin = (ny + 0.12) * H;
+  const inZone = (px, py) => py < chin || (twin && ((px < 0.3 * W && py < 0.78 * H) || (px > 0.7 * W && py < 0.74 * H)));
   for (let py = 0; py < H * 0.82; py++) for (let px = 0; px < W; px++) {
     const i = py * W + px, j = i * 4;
-    if (d[j + 3] < 160 || inFace(px, py) || !inZone(px, py)) continue;
+    if (d[j + 3] < 160 || inFace(px, py) || inMouth(px, py) || !inZone(px, py)) continue;
     const [h, sat, v] = hsv(d[j], d[j + 1], d[j + 2]);
-    if (inCheek(px, py) && sat < 0.33) continue;
+    // blush is a paler pink than hair, and redder than the pink hair (hue ≈ 4 against ≈ 340)
+    if (inCheek(px, py) && (sat < 0.33 || (twin && h < 100))) continue;
     // dark shading and ink on top of the skull belong to the hair too
     if (is(h, sat, v) || (py < (hy + 0.02) * H && v < 0.35)) hair[i] = 1;
   }
@@ -551,9 +571,10 @@ function hairOf(id) {
   for (let py = 0; py < H; py++) for (let px = 0; px < W; px++) {
     const i = py * W + px, j = i * 4;
     if (hair[i]) { mask[i] = 1; continue; }
-    if (d[j + 3] < 40 || inFace(px, py) || inCheek(px, py) || !inZone(px, py)) continue;
+    if (d[j + 3] < 40 || inFace(px, py) || inCheek(px, py) || inMouth(px, py) || !inZone(px, py)) continue;
     const lum = (d[j] + d[j + 1] + d[j + 2]) / 3;
-    if (lum > 150) continue;
+    // below the chin, not the grey gamepad: only true ink, or the pinkish fringe between hair and ink
+    if (lum > 150 || (py > chin && lum > 60 && hsv(d[j], d[j + 1], d[j + 2])[1] < 0.2)) continue;
     let near = false;
     for (let oy = -R; oy <= R && !near; oy++) for (let ox = -R; ox <= R; ox++) { const q = (py + oy) * W + px + ox; if (q >= 0 && q < W * H && hair[q]) { near = true; break; } }
     if (near) mask[i] = 1;
@@ -648,29 +669,6 @@ function trimmed(c) {
   return Object.assign(out, { trimX: x0, trimY: y0 });
 }
 
-// ---------- reins: the pilot's fists hold something (user: "cánh tay như đưa vào không khí") ----------
-// fists on the base pilots (near, far) and on the classic aviator art, as fractions of the bare pilot image
-const FISTS = { m: [[0.66, 0.6], [0.86, 0.56]], f: [[0.66, 0.61], [0.85, 0.56]], m2: [[0.68, 0.59], [0.87, 0.55]], f2: [[0.66, 0.6], [0.83, 0.57]] };
-const FISTS_CLASSIC = [[0.6, 0.64], [0.94, 0.6]];
-// where each xe's reins or handle are held to (fraction of the animal image), and their colour
-const REINS = {
-  rong: [[0.8, 0.47], '#e8b630'], kylan: [[0.72, 0.36], '#e8b630'], kimquy: [[0.5, 0.12], '#8a5a2a'],
-  phuong: [[0.62, 0.34], '#e8b630'], voi: [[0.72, 0.4], '#8a2a1a'], bachtuoc: [[0.88, 0.32], '#6b4a2a'],
-  bocap: [[0.72, 0.55], '#6b4a2a'], cu: [[0.72, 0.1], '#b98a2a'], camap: [[0.62, 0.22], '#6b4a2a'],
-  gau: [[0.62, 0.44], '#c8302e'], canhcut: [[0.6, 0.3], '#d8343a'], tho: [[0.66, 0.44], '#e8b630'],
-};
-export function drawReins(ctx, R, s = 1, x0 = 0, y0 = 0) {
-  if (!R) return;
-  const [ax, ay] = [x0 + R.anchor[0] * s, y0 + R.anchor[1] * s];
-  for (const [w, col] of [[R.lw * 2.4, '#1a1410'], [R.lw * 1.25, R.color]]) {
-    ctx.lineWidth = w * s; ctx.strokeStyle = col; ctx.lineCap = 'round';
-    for (const [fx, fy] of R.fists) {
-      const x = x0 + fx * s, y = y0 + fy * s, d = Math.hypot(ax - x, ay - y);
-      ctx.beginPath(); ctx.moveTo(x, y); ctx.quadraticCurveTo((x + ax) / 2, (y + ay) / 2 + d * 0.14, ax, ay); ctx.stroke();
-    }
-  }
-}
-
 // Animal + pilot merged into one canvas. animalH lets callers size by the animal, not the rider.
 export function xeSprite(xe, gender = 'm') {
   const animal = ASSETS.xe[xe];
@@ -695,13 +693,6 @@ export function xeSprite(xe, gender = 'm') {
     ctx.drawImage(pilot, px - left, py - top, pw, ph);
     const occ = occPath(xe, -left, -top, animal.width, animal.height);
     if (occ) { ctx.save(); ctx.clip(occ); ctx.drawImage(animal, -left, -top); ctx.restore(); }
-    // reins from both fists to the xe, so the hands hold something
-    const rein = REINS[xe], L = parseLook(gender), fists = ITEMS.s.find(it => it.n === L.s)?.classic ? FISTS_CLASSIC : FISTS[L.pilot] || FISTS.m;
-    if (rein) {
-      const fx0 = px - left + (pilot.padL || 0) * k, fy0 = py - top + (pilot.padT || 0) * k;
-      c.reins = { fists: fists.map(([fx, fy]) => [fx0 + fx * bw * k, fy0 + fy * bh * k]), anchor: [-left + rein[0][0] * animal.width, -top + rein[0][1] * animal.height], color: rein[1], lw: animal.height * 0.006 };
-      drawReins(ctx, c.reins);
-    }
   }
   c.behind = SEAT_BEHIND.has(xe);
   c.animalH = animal.height;
