@@ -252,7 +252,7 @@ Findings from reviewing the code and numbers (not yet play-tested with real peop
    - Rồng and Voi were too slow on painted maps. *Changed: move 130 px.*
 6. **Maps all feel the same.** *Changed: each painted map can be mirrored at random; spawns alternate A/B by position; Núi Lửa's lava rises after turn 15.*
 7. **No onboarding.** *Changed: a practice room (Luyện tập) with a dummy target and a ghost of your last trajectory.*
-8. **Tournament / leaderboard.** *Done: leaderboard (top 10) in the lobby.* *Not done yet: a tournament bracket (see §8).*
+8. **Tournament / leaderboard.** *Done: leaderboard in the lobby listing every account, also those with no match yet (0 GP, Gà Con; user 2026-10-01), up to 100, scrolling.* *Not done yet: a tournament bracket (see §8).*
 9. **Gold had no use.** *Changed: gold buys items during a match.*
 10. **Rank spoofing by name.** *Changed: name + 4-digit PIN; the first login claims the name.*
 11. **Sound is placeholder beeps.** *Changed: layered synthesized SFX plus procedural background music per map (WebAudio), with a mute button.*

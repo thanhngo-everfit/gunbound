@@ -15,6 +15,16 @@ export async function redis(...cmd) {
   return j.result;
 }
 
+// a command whose first argument is not a key (SCAN): sent as is
+export async function redisRaw(...cmd) {
+  if (!URL_ || !TOKEN) throw new Error('Thiếu cấu hình Redis (KV_REST_API_URL / KV_REST_API_TOKEN)');
+  const r = await fetch(URL_, { method: 'POST', headers: { Authorization: `Bearer ${TOKEN}`, 'Content-Type': 'application/json' }, body: JSON.stringify(cmd) });
+  const j = await r.json();
+  if (j.error) throw new Error(j.error);
+  return j.result;
+}
+export { PREFIX };
+
 // HGETALL as an object of parsed JSON values
 export async function hgetallJson(key) {
   const flat = (await redis('HGETALL', key)) || [];

@@ -85,7 +85,7 @@ function localLogin(name, gender) {
   saveAccounts();
   return { user, token: t };
 }
-const lobbyState = () => ({ rooms: lobbyList(), online: [...players.values()].filter(p => p.socket).length, leaderboard: leaderboard(10) });
+const lobbyState = () => ({ rooms: lobbyList(), online: [...players.values()].filter(p => p.socket).length, leaderboard: leaderboard(100, Object.values(accounts.users).map(u => u.name)) });
 const broadcastLobby = () => io.to('lobby').emit('lobby', lobbyState());
 const cleanName = s => String(s || '').replace(/\s+/g, ' ').trim().slice(0, 16);
 // `gender` is the player's look: pilot + outfit items (shared/outfits.js)

@@ -23,4 +23,4 @@ export function recordMatch(players, winner) {
   save();
 }
 export const profile = name => profileOf(db, name);
-export const leaderboard = (n = 10) => leaderboardOf(db, n);
+export const leaderboard = (n, names) => leaderboardOf(db, n, names);

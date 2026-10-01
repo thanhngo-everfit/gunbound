@@ -50,7 +50,7 @@ User: "build server to deploy to vercel, not in my local", on free plans. Vercel
   - `login`: name + PIN, 30-day session tokens.
   - `ably-token`.
   - `rooms`: the registry hash `rooms`, kept fresh by a 20 s host heartbeat; rooms are stale after 75 s.
-  - `lobby`: rooms, Ably presence count, leaderboard and the player's profile.
+  - `lobby`: rooms, Ably presence count, leaderboard and the player's profile. The leaderboard lists every account: names live in the Redis set `players` (added at account creation; `api/_lib/players.js` backfills older accounts once by scanning `guser:*`). The Node server passes `accounts.users` names instead.
   - `profiles`.
   - `match`: only the registered host can report, and each match id counts once.
   - Shared maths: `shared/stats-core.js` (also used by the Node `server/stats.js`).

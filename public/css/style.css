@@ -551,3 +551,5 @@ input, select { background: #05112e; border-color: #9cd0ff; }
 .wd-pilots button.on, .wd-tabs button.on, .wd-items button.on { background: linear-gradient(180deg, #fff27a, #f0a800); color: #5a2a00; border-color: #fffbd0; }
 .wd-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 12px; }
 @media (max-width: 760px) { .wd-body { flex-direction: column; } }
+/* every account is listed now: scroll inside the panel when it gets long */
+#leaderboard { max-height: 60vh; overflow-y: auto; }

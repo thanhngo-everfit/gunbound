@@ -6,6 +6,7 @@
 // POST { token, logout: true }       → end this session
 import { randomUUID } from 'node:crypto';
 import { redis } from './_lib/redis.js';
+import { addPlayer } from './_lib/players.js';
 import { handle, body } from './_lib/http.js';
 import { verifyGoogle } from './_lib/google.js';
 import { pidOf, cleanName, cleanGender } from '../shared/ids.js';
@@ -45,5 +46,6 @@ export default handle(async (req, res) => {
   if (!owner && (await redis('GET', `gname:${name.toLowerCase()}`)) !== g.sub) return res.json({ error: 'Tên này đã có người dùng, hãy chọn tên khác', needName: true, suggest: name });
   const user = { name, gender: cleanGender(gender), email: g.email };
   await redis('SET', `guser:${g.sub}`, JSON.stringify(user));
+  await addPlayer(name);
   res.json(await session(user));
 });

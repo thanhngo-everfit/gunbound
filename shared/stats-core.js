@@ -40,11 +40,12 @@ export function profileOf(db, name) {
   };
 }
 
-// Top players for the lobby leaderboard: most GP, then wins, then games.
-export function leaderboardOf(db, n = 10) {
-  return Object.keys(db)
+// The lobby leaderboard: most GP, then wins, then games. Every account is listed, also those with no match yet
+// (0 GP, Gà Con; user, 2026-10-01: "luôn show tất cả người chơi đã tạo acc").
+export function leaderboardOf(db, n = 100, names = []) {
+  const all = new Set([...Object.keys(db).filter(k => db[k].games > 0), ...names.filter(Boolean)]);
+  return [...all]
     .map(name => ({ name, ...profileOf(db, name) }))
-    .filter(p => p.games > 0)
-    .sort((a, b) => b.gp - a.gp || b.wins - a.wins || b.games - a.games)
+    .sort((a, b) => b.gp - a.gp || b.wins - a.wins || b.games - a.games || a.name.localeCompare(b.name, 'vi'))
     .slice(0, n);
 }

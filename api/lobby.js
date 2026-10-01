@@ -4,9 +4,10 @@ import { redis, hgetallJson } from './_lib/redis.js';
 import { handle } from './_lib/http.js';
 import { profileOf, leaderboardOf } from '../shared/stats-core.js';
 import { STALE_MS } from './rooms.js';
+import { allPlayers } from './_lib/players.js';
 
 export default handle(async (req, res) => {
-  const [rooms, db] = await Promise.all([hgetallJson('rooms'), hgetallJson('stats')]);
+  const [rooms, db, names] = await Promise.all([hgetallJson('rooms'), hgetallJson('stats'), allPlayers().catch(() => [])]);
   const now = Date.now(), live = [], stale = [];
   for (const [id, r] of Object.entries(rooms)) (now - r.updated > STALE_MS ? stale : live).push(id === r.id ? r : { ...r, id });
   if (stale.length) redis('HDEL', 'rooms', ...stale).catch(() => {});
@@ -19,6 +20,6 @@ export default handle(async (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
   res.json({
     rooms: live.sort((a, b) => Number(a.id) - Number(b.id)).map(r => r.info),
-    online, leaderboard: leaderboardOf(db, 10), me: name ? profileOf(db, name) : undefined,
+    online, leaderboard: leaderboardOf(db, 100, names), me: name ? profileOf(db, name) : undefined,
   });
 });
