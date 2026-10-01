@@ -15,7 +15,7 @@ export const SEATS = {
   gau: [0.38, 0.36, 0.5], canhcut: [0.36, 0.2, 0.55], tho: [0.43, 0.5, 0.44],
 };
 
-export const ASSETS = { xe: {}, pilot: {}, bg: {}, proj: {}, terrain: {}, icons: {}, outfit: { h: {}, g: {}, s: {} }, ready: false };
+export const ASSETS = { xe: {}, pilot: {}, pilotClassic: {}, bg: {}, proj: {}, terrain: {}, icons: {}, outfit: { h: {}, g: {}, s: {} }, ready: false };
 const composites = new Map();
 export const resetComposites = () => composites.clear();
 // Pilot layering (user feedback 2026-10-01: arms and legs pasted over the animal looked clumsy).
@@ -63,7 +63,7 @@ const keyness = (r, g, b, green) => (green ? g - Math.max(r, b) : Math.min(r, b)
 
 // Flood-fill the background from the image border so pink/purple details inside the sprite survive,
 // then soften the one-pixel fringe and trim to the sprite's bounding box.
-function cutOut(img, green, trim = true, holes = false) {
+function cutOut(img, green, trim = true, holes = false, holesMin = 140) {
   const w = img.width, h = img.height;
   const c = document.createElement('canvas');
   c.width = w; c.height = h;
@@ -87,7 +87,7 @@ function cutOut(img, green, trim = true, holes = false) {
     if (y < h - 1) stack.push(i + w);
   }
   // sheets with no pink subjects can also key enclosed pockets (trophy handles, hammer gaps)
-  if (holes) for (let i = 0; i < w * h; i++) if (!bg[i] && keyness(d[i * 4], d[i * 4 + 1], d[i * 4 + 2], green) > 140) bg[i] = 1;
+  if (holes) for (let i = 0; i < w * h; i++) if (!bg[i] && keyness(d[i * 4], d[i * 4 + 1], d[i * 4 + 2], green) > holesMin) bg[i] = 1;
   let x0 = w, y0 = h, x1 = 0, y1 = 0;
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
@@ -182,7 +182,12 @@ const XE_SHEETS = [
     boxes: { phuong: [48, 38, 502, 422], voi: [492, 12, 938, 422], bachtuoc: [902, 76, 1372, 412], cu: [98, 448, 594, 752], tethien: [646, 412, 1104, 758] },
     erase: { tethien: [[646, 412, 730, 428]], phuong: [[486, 300, 502, 422]], voi: [[492, 12, 506, 220], [890, 240, 938, 422], [792, 411, 938, 422]], bachtuoc: [[902, 76, 940, 210]] } },
 ];
-const PILOT_SHEET = { src: '/assets/sheets/pilot.jpg', rows: 1, order: ['m', 'f', 'm2', 'f2'] };
+// Base pilots (2026-10-01): plain hair, bare face, white tee, so outfits fit like Gunbound's avatars.
+// Its key is a softer purple-magenta, so enclosed gaps (between arm and chest) are keyed at a lower threshold.
+const PILOT_SHEET = { src: '/assets/sheets/pilot-base.jpg', order: ['m', 'f', 'm2', 'f2'], holes: true, holesMin: 75, view: [1400, 781],
+  boxes: { m: [52, 140, 378, 645], f: [380, 140, 702, 645], m2: [702, 125, 1016, 645], f2: [1018, 165, 1390, 645] } };
+// the first pilots (aviator cap, goggles, jackets) live on as the "Bộ Phi Công" outfit
+const PILOT_CLASSIC_SHEET = { src: '/assets/sheets/pilot.jpg', rows: 1, order: ['m', 'f', 'm2', 'f2'] };
 
 // Crop one figure out of a cut-out sheet and trim it to its visible pixels.
 function cropBox(sheet, [x0, y0, x1, y1], erase = [], [vw, vh]) {
@@ -355,11 +360,11 @@ async function loadProjectiles() {
   }));
 }
 
-async function loadSheet({ src, rows, order, boxes, erase = {}, view, holes = false, green: g = null, despill = [] }, green = false) {
+async function loadSheet({ src, rows, order, boxes, erase = {}, view, holes = false, holesMin = 140, green: g = null, despill = [] }, green = false) {
   if (g !== null) green = g;
   const img = await loadImg(src);
   if (!img) return null;
-  const sheet = cutOut(img, green, false, holes);
+  const sheet = cutOut(img, green, false, holes, holesMin);
   if (boxes) return Object.fromEntries(order.map(id => [id, (despill.includes(id) ? unPink : c => c)(cropBox(sheet, boxes[id], erase[id], view))]));
   const parts = sliceSheet(sheet, order.length, rows);
   return Object.fromEntries(order.map((id, i) => [id, parts[i]]));
@@ -405,71 +410,130 @@ export function drawSmooth(ctx, img, x, y, w, h) {
 }
 
 // ---------- trang phục (outfits) ----------
-// Items from outfits.jpg (5 columns × 3 rows: hats, glasses, tops) are fitted to each base pilot with anchors
-// measured on the pilot sprites (fractions of the pilot image, facing right):
-//   hat: brim line (y), centre and width · glasses: eye-line centre and width · top: torso box
-//   arms: the reaching arms, redrawn over a top so the vest sits under the sleeves like real clothes
+// Gunbound-style paper doll: the base pilots wear nothing (plain hair, bare face, white tee), so a hat sits on the
+// hair, glasses on the face, and a top is painted into the tee itself (its line art and shading kept), fitting exactly.
+// Anchors are measured on the base pilots (fractions of the pilot image, facing right):
+//   hat: [centre x, brim y, width] · eyes: [centre x, y, glasses width] · tee: polygon around the shirt · chest: emblem spot
 const PILOT_FIT = {
-  m: { hat: [0.56, 0.27, 0.86], eyes: [0.68, 0.41, 0.5], top: [0.27, 0.55, 0.72, 0.84],
-    arms: [[0.44, 0.57], [0.62, 0.57], [0.9, 0.6], [0.99, 0.62], [0.99, 0.74], [0.8, 0.76], [0.62, 0.75], [0.5, 0.72], [0.44, 0.66]] },
-  f: { hat: [0.55, 0.28, 0.86], eyes: [0.67, 0.43, 0.48], top: [0.27, 0.56, 0.72, 0.84],
-    arms: [[0.44, 0.58], [0.62, 0.58], [0.9, 0.6], [0.99, 0.62], [0.99, 0.74], [0.8, 0.76], [0.62, 0.75], [0.5, 0.72], [0.44, 0.66]] },
-  m2: { hat: [0.6, 0.25, 0.88], eyes: [0.64, 0.42, 0.56], top: [0.26, 0.54, 0.7, 0.82],
-    arms: [[0.42, 0.57], [0.6, 0.6], [0.85, 0.6], [0.99, 0.62], [0.99, 0.73], [0.6, 0.74], [0.48, 0.72], [0.42, 0.66]] },
-  f2: { hat: [0.6, 0.28, 0.7], eyes: [0.63, 0.42, 0.44], top: [0.36, 0.56, 0.74, 0.82],
-    arms: [[0.5, 0.58], [0.7, 0.6], [0.98, 0.6], [0.98, 0.72], [0.72, 0.73], [0.55, 0.72], [0.5, 0.66]] },
+  m: { hat: [0.42, 0.24, 0.82], eyes: [0.54, 0.36, 0.42], chest: [0.42, 0.6], back: [0.27, 0.48],
+    tee: [[0.22, 0.45], [0.5, 0.43], [0.68, 0.52], [0.64, 0.75], [0.22, 0.75]] },
+  f: { hat: [0.46, 0.24, 0.8], eyes: [0.56, 0.37, 0.42], chest: [0.44, 0.61], back: [0.28, 0.49],
+    tee: [[0.24, 0.46], [0.5, 0.45], [0.68, 0.53], [0.64, 0.75], [0.24, 0.75]] },
+  m2: { hat: [0.47, 0.25, 0.85], eyes: [0.57, 0.39, 0.42], chest: [0.47, 0.62], back: [0.34, 0.5],
+    tee: [[0.31, 0.47], [0.55, 0.46], [0.7, 0.55], [0.66, 0.78], [0.31, 0.78]] },
+  f2: { hat: [0.52, 0.22, 0.7], eyes: [0.585, 0.36, 0.4], chest: [0.49, 0.64], back: [0.38, 0.52],
+    tee: [[0.34, 0.49], [0.56, 0.48], [0.68, 0.56], [0.64, 0.78], [0.34, 0.78]] },
 };
-// per item: where its own "sits here" line is, as a fraction of the sprite height (the non lá's straps hang below its brim),
-// and tops worn behind the body (the cape)
-// the nón lá's chin ribbon is cut off (it crossed the face); its brim is the bottom of what's left
-const HAT_BASE = {}, HAT_BASE_DEFAULT = 0.9, HAT_CROP = { 1: 0.6 };
-const TOP_BEHIND = new Set([2]);
-const OUTFIT_SHEET = { src: '/assets/sheets/outfits.jpg', green: true, cols: 5, rows: 3, slots: ['h', 'g', 's'] };
+// the nón lá's chin ribbon is cut off (it crossed the face)
+const HAT_BASE_DEFAULT = 0.9, HAT_CROP = { 1: 0.6 };
+const OUTFIT_SHEET = { src: '/assets/sheets/outfits.jpg', green: true, cols: 5, rows: 3 };
+// tops: tee colour, an optional pattern and chest emblem, and the superhero's cape (a sprite from the sheet's 3rd row)
+const TOPS = {
+  1: { base: '#d42a2f', emblem: 'star', emblemColor: '#ffd42a' },
+  2: { base: '#ffffff', stripes: '#1f3f8f' },
+  3: { base: '#2a5bd7', emblem: 'bolt', emblemColor: '#ffd42a', cape: true },
+  4: { base: '#5d7334', camo: ['#3a4b22', '#8e9b5c', '#4a5a2a'] },
+  5: { base: '#ff8a3d', flowers: ['#ffffff', '#ffe14a', '#ff4f8b'] },
+  6: { base: '#9aa6b4', metal: true, plates: '#4d5866', emblem: 'cross', emblemColor: '#e8b630' },
+  7: { base: '#ff7a1a', straps: '#f4f4f4' },
+};
 
 async function loadOutfits() {
   const img = await loadImg(OUTFIT_SHEET.src);
   if (!img) return;
   const sheet = cutOut(img, OUTFIT_SHEET.green, false, true), cw = 1000 / OUTFIT_SHEET.cols, ch = 1000 / OUTFIT_SHEET.rows, m = 10;
-  OUTFIT_SHEET.slots.forEach((slot, r) => ITEMS[slot].forEach(it => {
-    const c = it.n - 1;
-    let img = cropBox(sheet, [c * cw + m, r * ch + m, (c + 1) * cw - m, (r + 1) * ch - m], [], [1000, 1000]);
-    const keep = slot === 'h' && HAT_CROP[it.n];
-    if (keep) { const k = document.createElement('canvas'); k.width = img.width; k.height = Math.round(img.height * keep); k.getContext('2d').drawImage(img, 0, 0); img = k; }
-    ASSETS.outfit[slot][it.n] = img;
-  }));
+  const cell = (c, r) => cropBox(sheet, [c * cw + m, r * ch + m, (c + 1) * cw - m, (r + 1) * ch - m], [], [1000, 1000]);
+  for (const it of ITEMS.h) {
+    let im = cell(it.n - 1, 0);
+    if (HAT_CROP[it.n]) { const k = document.createElement('canvas'); k.width = im.width; k.height = Math.round(im.height * HAT_CROP[it.n]); k.getContext('2d').drawImage(im, 0, 0); im = k; }
+    ASSETS.outfit.h[it.n] = im;
+  }
+  for (const it of ITEMS.g) ASSETS.outfit.g[it.n] = cell(it.n - 1, 1);
+  ASSETS.outfit.cape = cell(1, 2);
+}
+
+// the tee's pixels: light, unsaturated, inside the measured polygon (line art and skin stay out)
+function teeMask(base, fit) {
+  const W = base.width, H = base.height, c = document.createElement('canvas');
+  c.width = W; c.height = H;
+  const x = c.getContext('2d', { willReadFrequently: true });
+  x.beginPath(); fit.tee.forEach(([px, py], i) => (i ? x.lineTo : x.moveTo).call(x, px * W, py * H)); x.closePath(); x.clip();
+  x.drawImage(base, 0, 0);
+  const im = x.getImageData(0, 0, W, H), d = im.data, mask = new Float32Array(W * H);
+  for (let i = 0; i < W * H; i++) {
+    const r = d[i * 4], g = d[i * 4 + 1], b = d[i * 4 + 2], a = d[i * 4 + 3], mx = Math.max(r, g, b), mn = Math.min(r, g, b);
+    if (a < 200 || mx < 120 || (mx - mn) / mx > 0.16) continue;
+    mask[i] = Math.min(1, (mx - 120) / 60); // fade toward the outline
+  }
+  return mask;
+}
+const rgb = hex => [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16));
+function star(ctx, x, y, r, points = 5) {
+  ctx.beginPath();
+  for (let i = 0; i < points * 2; i++) { const a = -Math.PI / 2 + (i * Math.PI) / points, rr = i % 2 ? r * 0.45 : r; ctx.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr); }
+  ctx.closePath();
+}
+// paint top `n` into the tee: pattern × the tee's own shading
+function paintTop(base, fit, n) {
+  const T = TOPS[n], W = base.width, H = base.height;
+  const pat = document.createElement('canvas'); pat.width = W; pat.height = H;
+  const p = pat.getContext('2d', { willReadFrequently: true });
+  const ys = fit.tee.map(q => q[1] * H), xs = fit.tee.map(q => q[0] * W);
+  const y0 = Math.min(...ys), y1 = Math.max(...ys), x0 = Math.min(...xs), x1 = Math.max(...xs), u = (y1 - y0) / 10;
+  if (T.metal) { const g = p.createLinearGradient(x0, y0, x1, y1); g.addColorStop(0, '#ffffff'); g.addColorStop(0.35, '#d6dde6'); g.addColorStop(0.6, T.base); g.addColorStop(1, '#58636f'); p.fillStyle = g; }
+  else p.fillStyle = T.base;
+  p.fillRect(0, 0, W, H);
+  if (T.stripes) { p.fillStyle = T.stripes; for (let y = y0 + u * 0.6; y < y1; y += u * 1.6) p.fillRect(0, y, W, u * 0.7); }
+  if (T.plates) { p.fillStyle = T.plates; for (const f of [0.38, 0.62, 0.84]) p.fillRect(0, y0 + (y1 - y0) * f, W, Math.max(1.5, u * 0.22)); }
+  if (T.straps) { p.fillStyle = T.straps; for (const f of [0.45, 0.72]) p.fillRect(0, y0 + (y1 - y0) * f, W, u * 0.8); }
+  if (T.camo) { let s = 7; const rnd = () => ((s = (s * 9301 + 49297) % 233280) / 233280); for (let i = 0; i < 26; i++) { p.fillStyle = T.camo[i % T.camo.length]; p.beginPath(); p.ellipse(x0 + rnd() * (x1 - x0), y0 + rnd() * (y1 - y0), u * (0.8 + rnd()), u * (0.5 + rnd() * 0.6), rnd() * 3, 0, Math.PI * 2); p.fill(); } }
+  if (T.flowers) { let s = 11; const rnd = () => ((s = (s * 9301 + 49297) % 233280) / 233280); for (let i = 0; i < 14; i++) { p.fillStyle = T.flowers[i % T.flowers.length]; star(p, x0 + rnd() * (x1 - x0), y0 + rnd() * (y1 - y0), u * 0.75, 5); p.fill(); } }
+  if (T.emblem) {
+    const [cx, cy] = [fit.chest[0] * W, fit.chest[1] * H];
+    p.fillStyle = T.emblemColor; p.strokeStyle = '#1a1206'; p.lineWidth = Math.max(1.5, u * 0.18);
+    if (T.emblem === 'star') star(p, cx, cy, u * 1.5);
+    else if (T.emblem === 'cross') { p.beginPath(); p.rect(cx - u * 0.38, cy - u * 1.7, u * 0.76, u * 3.3); p.rect(cx - u * 1.2, cy - u * 0.9, u * 2.4, u * 0.7); }
+    else { p.beginPath(); p.moveTo(cx + u * 0.3, cy - u * 1.4); p.lineTo(cx - u * 0.7, cy + u * 0.15); p.lineTo(cx, cy + u * 0.15); p.lineTo(cx - u * 0.4, cy + u * 1.4); p.lineTo(cx + u * 0.8, cy - u * 0.25); p.lineTo(cx + u * 0.05, cy - u * 0.25); p.closePath(); }
+    p.fill(); p.stroke();
+  }
+  const mask = teeMask(base, fit), out = document.createElement('canvas'); out.width = W; out.height = H;
+  const o = out.getContext('2d', { willReadFrequently: true });
+  o.drawImage(base, 0, 0);
+  const im = o.getImageData(0, 0, W, H), d = im.data, pd = p.getImageData(0, 0, W, H).data;
+  for (let i = 0; i < W * H; i++) {
+    const m = mask[i];
+    if (!m) continue;
+    const j = i * 4, shade = Math.max(d[j], d[j + 1], d[j + 2]) / 255;
+    for (let k = 0; k < 3; k++) d[j + k] = d[j + k] * (1 - m) + pd[j + k] * shade * m;
+  }
+  o.putImageData(im, 0, 0);
+  return out;
 }
 
 // The base pilot wearing the items in a look string ("f2.h3.g1"). The canvas is padded for hats and capes;
 // baseW/baseH and padL/padT say where the pilot itself sits so riders stay the same size.
 const dressed = new Map();
 export function pilotImage(look) {
-  const L = parseLook(look), base = ASSETS.pilot[L.pilot] || ASSETS.pilot.m;
+  const L = parseLook(look);
+  // the classic aviator set is the first pilot art, cap, goggles and jacket included
+  if (ITEMS.s.find(it => it.n === L.s)?.classic) return ASSETS.pilotClassic[L.pilot] || ASSETS.pilot[L.pilot];
+  const base = ASSETS.pilot[L.pilot] || ASSETS.pilot.m;
   if (!base || (!L.h && !L.g && !L.s)) return base;
-  const key = look;
-  if (dressed.has(key)) return dressed.get(key);
+  if (dressed.has(look)) return dressed.get(look);
   const fit = PILOT_FIT[L.pilot] || PILOT_FIT.m, W = base.width, H = base.height;
-  const padT = Math.round(H * 0.4), padL = Math.round(W * 0.2), padR = Math.round(W * 0.1);
+  const padT = Math.round(H * 0.35), padL = Math.round(W * 0.25), padR = Math.round(W * 0.1);
   const c = document.createElement('canvas');
   c.width = W + padL + padR; c.height = H + padT;
   const x = c.getContext('2d');
   const at = (img, cx, cy, w, baseFrac = 0.5) => { const h = (img.height / img.width) * w; x.drawImage(img, padL + cx - w / 2, padT + cy - h * baseFrac, w, h); };
-  const top = L.s && ASSETS.outfit.s[L.s], hat = L.h && ASSETS.outfit.h[L.h], glasses = L.g && ASSETS.outfit.g[L.g];
-  const [tx0, ty0, tx1, ty1] = fit.top;
-  // a cape hangs behind the back, from the shoulders
-  if (top && TOP_BEHIND.has(L.s)) { const w = (tx1 - tx0) * W * 1.15; at(top, tx0 * W + w * 0.12, ty0 * H - w * 0.08, w, 0); }
-  x.drawImage(base, padL, padT);
-  if (top && !TOP_BEHIND.has(L.s)) {
-    const w = (tx1 - tx0) * W, h = (ty1 - ty0) * H;
-    x.drawImage(top, padL + tx0 * W, padT + ty0 * H, w, h);
-    // the sleeves go back on top of the vest
-    x.save(); x.beginPath();
-    fit.arms.forEach(([ax, ay], i) => (i ? x.lineTo : x.moveTo).call(x, padL + ax * W, padT + ay * H));
-    x.closePath(); x.clip(); x.drawImage(base, padL, padT); x.restore();
-  }
+  const T = L.s && TOPS[L.s], hat = L.h && ASSETS.outfit.h[L.h], glasses = L.g && ASSETS.outfit.g[L.g];
+  // the superhero's cape hangs behind the back
+  if (T?.cape && ASSETS.outfit.cape) { const w = W * 0.5; at(ASSETS.outfit.cape, fit.back[0] * W - w * 0.18, fit.back[1] * H - w * 0.05, w, 0); }
+  x.drawImage(T ? paintTop(base, fit, L.s) : base, padL, padT);
   if (glasses) at(glasses, fit.eyes[0] * W, fit.eyes[1] * H, fit.eyes[2] * W);
-  if (hat) at(hat, fit.hat[0] * W, fit.hat[1] * H, fit.hat[2] * W, HAT_BASE[L.h] ?? HAT_BASE_DEFAULT);
+  if (hat) at(hat, fit.hat[0] * W, fit.hat[1] * H, fit.hat[2] * W, HAT_BASE_DEFAULT);
   Object.assign(c, { baseW: W, baseH: H, padL, padT });
-  dressed.set(key, c);
+  dressed.set(look, c);
   return c;
 }
 
@@ -587,7 +651,8 @@ let loading = null;
 export function loadAssets() { return (loading ||= loadAll()); }
 
 async function loadAll() {
-  const [xeA, xeB, pilotSheet, xe2, xe3] = await Promise.all([...XE_SHEETS.map(sh => loadSheet(sh)), loadSheet(PILOT_SHEET), loadSheet(XE2_SHEET, true), loadSheet(XE3_SHEET, true), loadProjectiles(), loadIcons(), loadOutfits()]);
+  const [xeA, xeB, pilotSheet, xe2, xe3, classic] = await Promise.all([...XE_SHEETS.map(sh => loadSheet(sh)), loadSheet(PILOT_SHEET), loadSheet(XE2_SHEET, true), loadSheet(XE3_SHEET, true), loadSheet(PILOT_CLASSIC_SHEET), loadProjectiles(), loadIcons(), loadOutfits()]);
+  if (classic) Object.assign(ASSETS.pilotClassic, classic);
   const xeSheet = xeA && xeB;
   if (xeA) Object.assign(ASSETS.xe, xeA);
   if (xeB) Object.assign(ASSETS.xe, xeB);

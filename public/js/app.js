@@ -132,11 +132,19 @@ function renderWardrobe() {
   for (const b of $('wd-tabs').children) b.onclick = () => { wdTab = b.dataset.t; renderWardrobe(); };
   const items = [{ n: 0, name: 'Không đeo' }, ...ITEMS[wdTab]];
   $('wd-items').innerHTML = items.map(it => `<button type="button" data-n="${it.n}" class="${draft[wdTab] === it.n ? 'on' : ''}"><canvas width="88" height="72"></canvas><span>${it.name}</span></button>`).join('');
+  const classic = ITEMS.s.find(it => it.classic)?.n;
   for (const b of $('wd-items').children) {
     const n = Number(b.dataset.n);
-    if (n) thumb(b.querySelector('canvas'), ASSETS.outfit[wdTab][n]);
+    // tops are painted into the tee, so their thumbnail is the pilot wearing them
+    if (n) thumb(b.querySelector('canvas'), wdTab === 's' ? pilotImage(`${draft.pilot}.s${n}`) : ASSETS.outfit[wdTab][n], wdTab === 's' ? 0.98 : 0.86);
     else { const c = b.querySelector('canvas').getContext('2d'); c.font = '34px sans-serif'; c.textAlign = 'center'; c.fillText('🚫', 44, 48); }
-    b.onclick = () => { draft[wdTab] = n; renderWardrobe(); };
+    b.onclick = () => {
+      draft[wdTab] = n;
+      // the classic aviator set comes with its own cap and goggles
+      if (wdTab === 's' && n === classic) draft.h = draft.g = 0;
+      if (wdTab !== 's' && n && draft.s === classic) draft.s = 0;
+      renderWardrobe();
+    };
   }
 }
 $('wardrobe-open').onclick = openWardrobe;

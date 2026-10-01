@@ -187,13 +187,16 @@ Every shot has its own projectile sprite (30 total) and look key. Every SS has a
 ## 5. Economy and progression
 
 **Trang phục / avatar (phase 1, 2026-10-01).** User: "thay đổi trang phục như gunbound… mũ, áo, kính".
-- Three slots with 5 free items each (`shared/outfits.js`):
+- **First try, rejected:** items pasted over pilots who already wore caps, goggles and jackets ("lỏ vl, nhân vật default ko có đồ gì cả"). User then asked about 3D; I recommended against it (style mismatch, unrigged AI meshes, no 3D credits).
+- **Rework, Gunbound's paper doll:** like Gunbound's avatars (Head / Body / Glasses parts, one each, on a plain base character), the four base pilots are now redrawn plain: same faces, hair and driving pose, bare face, white tee.
+  - Hats sit on the hair and glasses on the bare face.
+  - Tops are painted into the tee itself in code (`assets.js paintTop`: tee mask × pattern × the tee's own shading), so they always fit.
+- **Items** (`shared/outfits.js`):
   - Mũ: Nón Lá, Vương Miện, Mũ Phù Thuỷ, Mũ Cướp Biển, Mũ Len Tai Mèo.
   - Kính: Kính Phi Công, Kính Trái Tim, Kính Pixel, Kính Tròn, Kính 3D.
-  - Áo: Giáp Hiệp Sĩ, Áo Choàng Siêu Nhân, Vest Nơ Đỏ, Áo Đấu Sao Vàng, Áo Phao.
-- The art is one Gamma sheet (`outfits.jpg`).
-- Opened from "👕 TRANG PHỤC" in the lobby card or the room's pilot row. Two live previews: the pilot, and the pilot riding the chosen xe.
-- The look is saved on the account and shows everywhere the pilot does: room, match, rider pop-up and results.
+  - Áo: Áo Đấu Sao Vàng, Áo Sọc Thuỷ Thủ, Áo Siêu Nhân (with cape), Áo Rằn Ri, Áo Hoa Hawaii, Giáp Hiệp Sĩ, Áo Phao.
+  - Bộ Phi Công: the old aviator pilots, which clears hat and glasses.
+- **Wardrobe:** opened from "👕 TRANG PHỤC" (lobby) or the room's pilot row. It has live previews, and the look is saved on the account.
 - Phase 2 ideas: buy items with gold, more slots (flag, background, pet), and per-xe effects.
 
 **Ranked matches only (2026-10-01).** User: "make sure là hoàn thành trận đấu thật mới được tính điểm để lên hạng". A match adds GP and rank only when all of these hold. `Room.unrankedReason()` checks them, and the results screen shows the reason when a match doesn't count:

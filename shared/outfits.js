@@ -10,7 +10,7 @@ export const SLOTS = [
   { key: 'g', name: 'Kính', icon: '🕶' },
   { key: 's', name: 'Áo', icon: '👕' },
 ];
-// n = cell number on public/assets/sheets/outfits.jpg (row = slot, column = n - 1)
+// hats and glasses: n = cell on public/assets/sheets/outfits.jpg (row = slot, column = n - 1)
 export const ITEMS = {
   h: [
     { n: 1, name: 'Nón Lá' }, { n: 2, name: 'Vương Miện' }, { n: 3, name: 'Mũ Phù Thuỷ' },
@@ -20,9 +20,11 @@ export const ITEMS = {
     { n: 1, name: 'Kính Phi Công' }, { n: 2, name: 'Kính Trái Tim' }, { n: 3, name: 'Kính Pixel' },
     { n: 4, name: 'Kính Tròn' }, { n: 5, name: 'Kính 3D' },
   ],
+  // tops are painted into the base pilot's white tee (exact fit), except the classic aviator set
   s: [
-    { n: 1, name: 'Giáp Hiệp Sĩ' }, { n: 2, name: 'Áo Choàng Siêu Nhân' }, { n: 3, name: 'Vest Nơ Đỏ' },
-    { n: 4, name: 'Áo Đấu Sao Vàng' }, { n: 5, name: 'Áo Phao' },
+    { n: 1, name: 'Áo Đấu Sao Vàng' }, { n: 2, name: 'Áo Sọc Thuỷ Thủ' }, { n: 3, name: 'Áo Siêu Nhân' },
+    { n: 4, name: 'Áo Rằn Ri' }, { n: 5, name: 'Áo Hoa Hawaii' }, { n: 6, name: 'Giáp Hiệp Sĩ' },
+    { n: 7, name: 'Áo Phao' }, { n: 8, name: 'Bộ Phi Công', classic: true },
   ],
 };
 
